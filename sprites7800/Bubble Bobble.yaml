@@ -1,0 +1,7 @@
+sprite_sheets:
+  - image: Bubble Bobble.png
+    sprites:
+      - name: bb_char1
+        top: 0
+        left: 0
+        width: 16
