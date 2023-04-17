@@ -5,3 +5,9 @@ sprite_sheets:
         top: 0
         left: 0
         width: 16
+        holeydma: true
+      - name: tiles
+        top: 16
+        left: 0
+        width: 16
+        holeydma: false

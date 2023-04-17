@@ -30,6 +30,8 @@ struct Sprite {
     top: u32,
     left: u32,
     width: u32,
+    #[serde(default = "default_holeydma")]
+    holeydma: bool,
     #[serde(default = "default_sprite_size")]
     height: u32,
     #[serde(default = "default_color")]
@@ -41,6 +43,7 @@ struct Sprite {
 }
 
 fn default_sprite_size() -> u32 { 16 }
+fn default_holeydma() -> bool { true }
 fn default_resolution() -> String { "160A".to_string() }
 fn default_color() -> (u8, u8, u8) { (0, 0, 0) }
 
@@ -106,7 +109,7 @@ fn main() -> Result <(), serde_yaml::Error> {
                 }
             }
             // Whoaw. We do have our pixels vector. Let's output it
-            if sprite.height == 16 {
+            if sprite.holeydma && (sprite.height == 8 || sprite.height == 16) {
                 print!("holeydma ");
             }
             print!("reversed scattered({},{}) char {}[{}] = {{\n\t", sprite.height, sprite.width / pixel_width * (pixel_bits as u32) / 8, sprite.name, bytes.len());
