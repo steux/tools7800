@@ -1,0 +1,8 @@
+sprite_sheets:
+  - image: tiles.png
+    sprites:
+      - name: tiles
+        top: 0 
+        left: 0
+        width: 96
+        holeydma: false
