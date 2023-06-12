@@ -9,8 +9,11 @@ use xml_dom::level2::{Node, NodeType};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
+    /// Generate 0xff boundaries
+    #[arg(short, long, default_value = "false")]
+    boundaries: Option<bool>,
     /// YAML input file
-    filename: String
+    filename: String,
 }
 
 fn main() -> Result <(), Box<dyn error::Error>>
@@ -49,14 +52,27 @@ fn main() -> Result <(), Box<dyn error::Error>>
                             //println!("Tiles: {}", csv);
                             let array = csv.split(',').map(|x| { u32::from_str(x).unwrap() } ).collect::<Vec::<_>>();
                             if array.len() == width * height {
-                                print!("const char tilemap[{}] = {{", (width + 1) * height + 1);
+                                print!("const char tilemap[{}] = {{", 
+                                    if let Some(true) = args.boundaries {
+                                        (width + 1) * height + 1
+                                    } else {
+                                        width * height
+                                    });
                                 for i in 0..height {
-                                    print!("\n\t0xff,");
+                                    if let Some(true) = args.boundaries { 
+                                        print!("\n\t0xff, "); 
+                                    } else {
+                                        print!("\n\t");
+                                    }
                                     for j in 0..width {
-                                        print!(" {},", (array[i * height + j] - 1) * 2);
+                                        print!("{}, ", (array[i * height + j] - 1) * 2);
                                     }
                                 }
-                                println!("\n\t0xff}};");
+                                if let Some(true) = args.boundaries { 
+                                    println!("\n\t0xff}};");
+                                } else {
+                                    println!("\n\t}};");
+                                }
                                 return Ok(());
                             } else {
                                 return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Bad data format. Unexpected table size.")));
