@@ -11,7 +11,7 @@ use xml_dom::level2::{Node, NodeType};
 struct Args {
     /// Generate 0xff boundaries
     #[arg(short, long, default_value = "false")]
-    boundaries: Option<bool>,
+    boundaries: bool,
     /// YAML input file
     filename: String,
 }
@@ -53,22 +53,24 @@ fn main() -> Result <(), Box<dyn error::Error>>
                             let array = csv.split(',').map(|x| { u32::from_str(x).unwrap() } ).collect::<Vec::<_>>();
                             if array.len() == width * height {
                                 print!("const char tilemap[{}] = {{", 
-                                    if let Some(true) = args.boundaries {
+                                    if args.boundaries {
                                         (width + 1) * height + 1
                                     } else {
                                         width * height
                                     });
                                 for i in 0..height {
-                                    if let Some(true) = args.boundaries { 
+                                    if args.boundaries { 
                                         print!("\n\t0xff, "); 
                                     } else {
                                         print!("\n\t");
                                     }
                                     for j in 0..width {
-                                        print!("{}, ", (array[i * height + j] - 1) * 2);
+                                        print!("{}{} ", (array[i * height + j] - 1) * 2,
+                                        if args.boundaries || i != height - 1 || j != width - 1 {","} else {""}
+                                        );
                                     }
                                 }
-                                if let Some(true) = args.boundaries { 
+                                if args.boundaries { 
                                     println!("\n\t0xff}};");
                                 } else {
                                     println!("\n\t}};");
