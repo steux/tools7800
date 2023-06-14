@@ -1,0 +1,14 @@
+WHITESPACE = _{" " | "\t"}
+
+file = { ((not_data)* ~ data)+ }
+not_data = _{ !"data" ~ ANY }
+data = { "data" ~ varname ~ NEWLINE ~ (arrayline)+ ~ "end"}
+arrayline = { value ~ ("," ~ value)* ~ comment* ~ NEWLINE}
+comment = _{";" ~ (!NEWLINE ~ ANY)* }
+varname = { char+ }
+char = { ASCII_ALPHANUMERIC | "_" }
+value = { int | hexa }
+int = { ASCII_DIGIT+ }
+hexa = { "$" ~ ASCII_HEX_DIGIT+ }
+
+
