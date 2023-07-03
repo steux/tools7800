@@ -256,11 +256,11 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                             println!("0x7f, 0xff}};");
                                         }
                                     }
-                                    print!("const char *tilemap_data[{}] = {{", height);
+                                    print!("const char tilemap_data[{}] = {{", height * 2);
                                     for y in 0..height - 1 {
-                                        print!("tilemap_{}_data, ", y);
+                                        print!("tilemap_{}_data & 0xff, tilemap_{}_data >> 8, ", y, y);
                                     }
-                                    println!("tilemap_{}_data}};\n", height - 1);
+                                    println!("tilemap_{}_data & 0xff, tilemap_{}_data >> 8}};\n", height - 1, height - 1);
                                     println!("#define TILING_HEIGHT {}", height);
                                     println!("#define TILING_WIDTH {}", width);
                                     println!("#include \"sparse_tiling.h\"\n");
