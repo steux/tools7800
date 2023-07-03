@@ -1,6 +1,6 @@
 [package]
 name = "tiles7800"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,4 +9,6 @@ edition = "2021"
 xml_dom = "0.2"
 clap = { version = "4", features = ["derive"] }
 clap_derive = "4"
-
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+image = "0.24"
