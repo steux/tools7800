@@ -47,6 +47,8 @@ struct Sprite {
     palette: Option<String>,
     #[serde(default)]
     mode: Option<String>,
+    #[serde(default)]
+    alias: Option<String>
 }
 
 fn default_sprite_size() -> u32 { 16 }
@@ -74,175 +76,179 @@ fn main() -> Result <(), Box<dyn Error>> {
         let img = image::open(&sprite_sheet.image).expect(&format!("Can't open image {}", sprite_sheet.image));
 
         for sprite in sprite_sheet.sprites {
-            let mode = if let Some(s) = &sprite.mode { s.as_str() } else {
-                sprite_sheet.mode.as_str()
-            }; 
+            if sprite.alias.is_none() {
+                let mode = if let Some(s) = &sprite.mode { s.as_str() } else {
+                    sprite_sheet.mode.as_str()
+                }; 
 
-            let pixel_width = match mode {
-                "320A" | "320B" | "320C" | "320D" => 1,
-                _ => 2,
-            };
-            let pixel_bits = match mode {
-                "320A" | "320D" => 1,
-                "160B" => 4,
-                _ => 2,
-            };
-            let maxcolors = match mode {
-                "160A" => 3,
-                "160B" => 12,
-                "320A" => 1,
-                "320B" => 3,
-                "320C" => 4,
-                "320D" => 1,
-                _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Unknown gfx {} mode", mode))))
-            };
-            
-            let mut colors = [(0u8, 0u8, 0u8);12];
-            if let Some(palettes) = &all_sprites.palettes {
-                if let Some(pname) = sprite.palette {
-                    let px = palettes.into_iter().find(|x| x.name == pname);
-                    if let Some(p) = px { 
-                        let mut i = 0;
-                        for c in &p.colors {
-                            colors[i] = *c;
-                            i += 1;
+                let pixel_width = match mode {
+                    "320A" | "320B" | "320C" | "320D" => 1,
+                    _ => 2,
+                };
+                let pixel_bits = match mode {
+                    "320A" | "320D" => 1,
+                    "160B" => 4,
+                    _ => 2,
+                };
+                let maxcolors = match mode {
+                    "160A" => 3,
+                    "160B" => 12,
+                    "320A" => 1,
+                    "320B" => 3,
+                    "320C" => 4,
+                    "320D" => 1,
+                    _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Unknown gfx {} mode", mode))))
+                };
+
+                let mut colors = [(0u8, 0u8, 0u8);12];
+                if let Some(palettes) = &all_sprites.palettes {
+                    if let Some(pname) = sprite.palette {
+                        let px = palettes.into_iter().find(|x| x.name == pname);
+                        if let Some(p) = px { 
+                            let mut i = 0;
+                            for c in &p.colors {
+                                colors[i] = *c;
+                                i += 1;
+                            }
                         }
                     }
                 }
-            }
 
-            let mut bytes = Vec::<u8>::new();
-            for y in 0..sprite.height {
-                let mut current_byte: u8 = 0;
-                let mut current_bits: u8 = 0;
-                for x in 0..sprite.width / pixel_width {
-                    let color = img.get_pixel(sprite.left + x * pixel_width, sprite.top + y);
-                    let mut cx: Option<u8> = None;
-                    if color[3] == 0 || (color[0] == 0 && color[1] == 0 && color[2] == 0) {
-                        cx = Some(0); // Background color (either black or transparent)
-                    } else {
-                        if mode == "320C" {
-                            // Check next pixel, should be background or same color
-                            let colorr = img.get_pixel(sprite.left + x * pixel_width + 1, sprite.top + y);
-                            if !(colorr[3] == 0 || (colorr[0] == 0 && colorr[1] == 0 && colorr[2] == 0)) {
-                                // This is not background
-                                if colorr != color {
-                                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Two consecutive pixels have a different color in 320C mode (x = {}, y = {})", x * 2, y))));
+                let mut bytes = Vec::<u8>::new();
+                for y in 0..sprite.height {
+                    let mut current_byte: u8 = 0;
+                    let mut current_bits: u8 = 0;
+                    for x in 0..sprite.width / pixel_width {
+                        let color = img.get_pixel(sprite.left + x * pixel_width, sprite.top + y);
+                        let mut cx: Option<u8> = None;
+                        if color[3] == 0 || (color[0] == 0 && color[1] == 0 && color[2] == 0) {
+                            cx = Some(0); // Background color (either black or transparent)
+                        } else {
+                            if mode == "320C" {
+                                // Check next pixel, should be background or same color
+                                let colorr = img.get_pixel(sprite.left + x * pixel_width + 1, sprite.top + y);
+                                if !(colorr[3] == 0 || (colorr[0] == 0 && colorr[1] == 0 && colorr[2] == 0)) {
+                                    // This is not background
+                                    if colorr != color {
+                                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Two consecutive pixels have a different color in 320C mode (x = {}, y = {})", x * 2, y))));
+                                    }
                                 }
                             }
-                        }
-                        for c in 0..maxcolors {
-                            if color[0] == colors[c].0 && color[1] == colors[c].1 && color[2] == colors[c].2 {
-                                // Ok. this is a pixel of color c
-                                cx = Some((c + 1) as u8);
-                                break;
-                            }
-                        }
-                        if cx.is_none() {
-                            // Let's find a unaffected color
                             for c in 0..maxcolors {
-                                if colors[c].0 == 0 && colors[c].1 == 0 && colors[c].2 == 0 {
-                                    colors[c].0 = color[0];
-                                    colors[c].1 = color[1];
-                                    colors[c].2 = color[2];
+                                if color[0] == colors[c].0 && color[1] == colors[c].1 && color[2] == colors[c].2 {
+                                    // Ok. this is a pixel of color c
                                     cx = Some((c + 1) as u8);
                                     break;
                                 }
                             }
                             if cx.is_none() {
-                                panic!("Sprite {} has more than {} colors", sprite.name, maxcolors);
-                            }
-                        }
-                    }
-                    match mode {
-                        "160A" | "320A" | "320D" => {
-                            current_byte |= cx.unwrap();
-                            current_bits += pixel_bits;
-                            if current_bits == 8 {
-                                bytes.push(current_byte);
-                                current_byte = 0;
-                                current_bits = 0;
-                            } else {
-                                current_byte <<= pixel_bits;
-                            };
-                        },
-                        "160B" => {
-                            let c = match cx.unwrap() {
-                                0 => 0,
-                                1 => 1,
-                                2 => 2,
-                                3 => 3,
-                                4 => 5,
-                                5 => 6,
-                                6 => 7,
-                                7 => 9,
-                                8 => 10,
-                                9 => 11,
-                                10 => 13,
-                                11 => 14,
-                                12 => 15,
-                                _ => 0
-                            };
-                            current_byte |= (if c & 1 != 0 { 16 } else { 0 }) |
-                                            (if c & 2 != 0 { 32 } else { 0 }) |
-                                            (if c & 4 != 0 { 1 } else { 0 }) |
-                                            (if c & 8 != 0 { 2 } else { 0 });
-                            current_bits += 1;
-                            if current_bits == 2 {
-                                bytes.push(current_byte);
-                                current_byte = 0;
-                                current_bits = 0;
-                            } else {
-                                current_byte <<= 2;
-                            };
-                        },
-                        "320B" => {
-                            let c = cx.unwrap();
-                            current_byte |= (if c & 1 != 0 { 1 } else { 0 }) |
-                                            (if c & 2 != 0 { 16 } else { 0 });
-                            current_bits += 1;
-                            if current_bits == 4 {
-                                bytes.push(current_byte);
-                                current_byte = 0;
-                                current_bits = 0;
-                            } else {
-                                current_byte <<= 1;
-                            };
-                        },
-                        "320C" => {
-                            let c = cx.unwrap();
-                            if c != 0 {
-                                current_byte |= 1 << (7 - current_bits);
-                                if current_bits < 2 {
-                                    current_byte |= c << 2;
-                                } else {
-                                    current_byte |= c;
+                                // Let's find a unaffected color
+                                for c in 0..maxcolors {
+                                    if colors[c].0 == 0 && colors[c].1 == 0 && colors[c].2 == 0 {
+                                        colors[c].0 = color[0];
+                                        colors[c].1 = color[1];
+                                        colors[c].2 = color[2];
+                                        cx = Some((c + 1) as u8);
+                                        break;
+                                    }
+                                }
+                                if cx.is_none() {
+                                    panic!("Sprite {} has more than {} colors", sprite.name, maxcolors);
                                 }
                             }
-                            current_bits += 1;
-                            if current_bits == 4 {
-                                bytes.push(current_byte);
-                                current_byte = 0;
-                                current_bits = 0;
-                            }                        },
-                        _ => unreachable!(),
-                    };
+                        }
+                        match mode {
+                            "160A" | "320A" | "320D" => {
+                                current_byte |= cx.unwrap();
+                                current_bits += pixel_bits;
+                                if current_bits == 8 {
+                                    bytes.push(current_byte);
+                                    current_byte = 0;
+                                    current_bits = 0;
+                                } else {
+                                    current_byte <<= pixel_bits;
+                                };
+                            },
+                            "160B" => {
+                                let c = match cx.unwrap() {
+                                    0 => 0,
+                                    1 => 1,
+                                    2 => 2,
+                                    3 => 3,
+                                    4 => 5,
+                                    5 => 6,
+                                    6 => 7,
+                                    7 => 9,
+                                    8 => 10,
+                                    9 => 11,
+                                    10 => 13,
+                                    11 => 14,
+                                    12 => 15,
+                                    _ => 0
+                                };
+                                current_byte |= (if c & 1 != 0 { 16 } else { 0 }) |
+                                    (if c & 2 != 0 { 32 } else { 0 }) |
+                                    (if c & 4 != 0 { 1 } else { 0 }) |
+                                    (if c & 8 != 0 { 2 } else { 0 });
+                                current_bits += 1;
+                                if current_bits == 2 {
+                                    bytes.push(current_byte);
+                                    current_byte = 0;
+                                    current_bits = 0;
+                                } else {
+                                    current_byte <<= 2;
+                                };
+                            },
+                            "320B" => {
+                                let c = cx.unwrap();
+                                current_byte |= (if c & 1 != 0 { 1 } else { 0 }) |
+                                    (if c & 2 != 0 { 16 } else { 0 });
+                                current_bits += 1;
+                                if current_bits == 4 {
+                                    bytes.push(current_byte);
+                                    current_byte = 0;
+                                    current_bits = 0;
+                                } else {
+                                    current_byte <<= 1;
+                                };
+                            },
+                            "320C" => {
+                                let c = cx.unwrap();
+                                //println!("Color: {}", c);
+                                if c != 0 {
+                                    current_byte |= 1 << (7 - current_bits);
+                                    if current_bits < 2 {
+                                        current_byte |= (c - 1) << 2;
+                                    } else {
+                                        current_byte |= c - 1;
+                                    }
+                                }
+                                current_bits += 1;
+                                if current_bits == 4 {
+                                    bytes.push(current_byte);
+                                    current_byte = 0;
+                                    current_bits = 0;
+                                }                        },
+                            _ => unreachable!(),
+                        };
+                    }
                 }
-            }
-            // Whoaw. We do have our pixels vector. Let's output it
-            if sprite.holeydma && (sprite.height == 8 || sprite.height == 16) {
-                print!("holeydma ");
-            }
-            print!("reversed scattered({},{}) char {}[{}] = {{\n\t", sprite.height, sprite.width / pixel_width * (pixel_bits as u32) / 8, sprite.name, bytes.len());
-            for i in 0..bytes.len() - 1 {
-                print!("0x{:02x}", bytes[i]);
-                if (i + 1) % 16 != 0 {
-                    print!(", ");
-                } else {
-                    print!(",\n\t");
+                // Whoaw. We do have our pixels vector. Let's output it
+                if sprite.holeydma && (sprite.height == 8 || sprite.height == 16) {
+                    print!("holeydma ");
                 }
-            } 
-            println!("0x{:02x}\n}};", bytes[bytes.len() - 1]);
+                print!("reversed scattered({},{}) char {}[{}] = {{\n\t", sprite.height, sprite.width / pixel_width * (pixel_bits as u32) / 8, sprite.name, bytes.len());
+                for i in 0..bytes.len() - 1 {
+                    print!("0x{:02x}", bytes[i]);
+                    if (i + 1) % 16 != 0 {
+                        print!(", ");
+                    } else {
+                        print!(",\n\t");
+                    }
+                } 
+                println!("0x{:02x}\n}};", bytes[bytes.len() - 1]);
+
+            }
         }
     } 
 

@@ -59,7 +59,9 @@ struct Sprite {
     #[serde(default)]
     mode: Option<String>,
     #[serde(default)]
-    palette_number: Option<u8>
+    palette_number: Option<u8>,
+    #[serde(default)]
+    alias: Option<String>
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -141,6 +143,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                     let mut index = 0;
                                     let defmode = tiles_sheet.mode.as_str();
                                     let mut tiles = HashMap::<u32, Tile>::new();
+                                    let mut aliases = HashMap::<&str, u32>::new();
                                     for tile in &tiles_sheet.sprites {
                                         // Do not consider sprites
                                         let mode = if let Some(m) = &tile.mode { m.as_str() } else { defmode };
@@ -153,16 +156,25 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                             _ => unreachable!()
                                         };
                                         if !tile.holeydma {
+                                            aliases.insert(&tile.name.as_str(), index);
                                             let y = tile.top / tileheight;
                                             let x = tile.left / tilewidth;
                                             let ix = 1 + x + y * image_width / tilewidth;
                                             let nbtiles = tile.width / tilewidth;
                                             let palette_number = if let Some(p) = tile.palette_number { p } else { 0 }; 
+                                            let mut idx = if let Some(alias) = &tile.alias {
+                                                if let Some(i) = aliases.get(alias.as_str()) {
+                                                    *i
+                                                } else {
+                                                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Bad alias")));
+                                                }
+                                            } else { index };
                                             for i in 0..nbtiles {
                                                 tiles.insert(ix + i, Tile {
-                                                    index, mode, palette_number
+                                                    index: idx, mode, palette_number
                                                 });
                                                 index += tile_bytes;
+                                                idx += tile_bytes;
                                             }
                                         }
                                     }
@@ -201,14 +213,24 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                                             startx = x as u32;
                                                         }
                                                     } else {
-                                                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Wrong tilesheet. Index unknown")));
+                                                        //return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Wrong tilesheet. Index unknown")));
+                                                        // It's not in the tilesheet. Consider it as 0 (empty)
+                                                        if !tileset.is_empty() {
+                                                            tilesets.push((startx, tileset));
+                                                            tileset = Vec::<Tile>::new();
+                                                        }
                                                     }
                                                 } else {
                                                     if let Some(t) = tiles.get(&cell) {
                                                         tileset.push(t.clone());
                                                         startx = x as u32;
                                                     } else {
-                                                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Wrong tilesheet. Index unknown")));
+                                                        //return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Wrong tilesheet. Index unknown")));
+                                                        // It's not in the tilesheet. Consider it as 0 (empty)
+                                                        if !tileset.is_empty() {
+                                                            tilesets.push((startx, tileset));
+                                                            tileset = Vec::<Tile>::new();
+                                                        }
                                                     }
                                                 }
                                             }           
@@ -253,7 +275,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                                     s.0 + s.1.len() as u32 - 1, s.0, write_mode, ttype.palette_number, w[c], (10 + 3 + 9 * w[c]) / 2);
                                                 c += 1;
                                             }
-                                            println!("0x7f, 0xff}};");
+                                            println!("96, 0xff}};");
                                         }
                                     }
                                     print!("const char tilemap_data[{}] = {{", height * 2);
