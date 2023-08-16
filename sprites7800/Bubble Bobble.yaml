@@ -10,22 +10,22 @@ sprite_sheets:
         top: 32
         left: 0
         width: 256
-        holdydma: true
+        holeydma: true
       - name: chars1
         top: 48 
         left: 0
         width: 256
-        holdydma: true
+        holeydma: true
       - name: chars2
         top: 64 
         left: 0
         width: 256
-        holdydma: true
+        holeydma: true
       - name: chars3
         top: 80 
         left: 0
         width: 256
-        holdydma: true
+        holeydma: true
       - name: bb_char1
         top: 0
         left: 0
