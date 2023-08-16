@@ -66,7 +66,10 @@ fn default_mode() -> String { "160A".to_string() }
 // |      | P2 = 1 => P4C1, P4C2, P4C3
 // | 320C | P2 = 0 => P0C2, P1C2, P2C2, P3C2
 // |      | P2 = 1 => P4C2, P5C2, P6C2, P7C2
-//
+// | 320D | P2 = X, P1 = 0, P0 = 0 => PXC2 
+// |      | P2 = X, P1 = 0, P0 = 1 => PXC1, PXC2, PXC3 with BG on the left
+// |      | P2 = X, P1 = 1, P0 = 0 => PXC1, PXC2, PXC3 with BG on the right 
+// |      | P2 = X, P1 = 1, P0 = 1 => PXC1, PXC3
 
 fn main() -> Result <(), Box<dyn Error>> {
     let args = Args::parse();
@@ -101,14 +104,16 @@ fn main() -> Result <(), Box<dyn Error>> {
                 };
 
                 let mut colors = [(0u8, 0u8, 0u8);12];
-                if let Some(palettes) = &all_sprites.palettes {
-                    if let Some(pname) = sprite.palette {
-                        let px = palettes.into_iter().find(|x| x.name == pname);
-                        if let Some(p) = px { 
-                            let mut i = 0;
-                            for c in &p.colors {
-                                colors[i] = *c;
-                                i += 1;
+                if maxcolors != 1 {
+                    if let Some(palettes) = &all_sprites.palettes {
+                        if let Some(pname) = sprite.palette {
+                            let px = palettes.into_iter().find(|x| x.name == pname);
+                            if let Some(p) = px { 
+                                let mut i = 0;
+                                for c in &p.colors {
+                                    colors[i] = *c;
+                                    i += 1;
+                                }
                             }
                         }
                     }
@@ -153,6 +158,7 @@ fn main() -> Result <(), Box<dyn Error>> {
                                     }
                                 }
                                 if cx.is_none() {
+                                    println!("Unexpected color {:?} found at {},{}", color, sprite.left + x * pixel_width, sprite.top + y);
                                     panic!("Sprite {} has more than {} colors", sprite.name, maxcolors);
                                 }
                             }

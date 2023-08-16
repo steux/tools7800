@@ -153,6 +153,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                             "320A" => tilewidth / 8,
                                             "320B" => tilewidth / 4,
                                             "320C" => tilewidth / 4,
+                                            "320D" => tilewidth / 8,
                                             _ => unreachable!()
                                         };
                                         if !tile.holeydma {
@@ -248,7 +249,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                                 for t in &s.1 {
                                                     // We assume we are in 2 bytes mode
                                                     let nb = match t.mode {
-                                                        "160A" | "320A" => tilewidth / 16,
+                                                        "160A" | "320A" | "320D" => tilewidth / 16,
                                                         _ => tilewidth / 8,
                                                     };
                                                     for i in 0..nb {
