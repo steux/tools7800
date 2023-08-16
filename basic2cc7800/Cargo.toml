@@ -2,6 +2,14 @@
 name = "basic2cc7800"
 version = "0.1.0"
 edition = "2021"
+authors = ["Bruno STEUX <bruno.steux@gmail.com>"]
+license = "GPL-3.0-or-later"
+description = "a companion tool of cc7800 for converting basic7800 tables to C"
+readme = "README.md"
+homepage = "https://github.com/steux/tools7800"
+repository = "https://github.com/steux/tools7800"
+keywords = ["cli", "gamedev"]
+categories = ["command-line-utilities", "game-development"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
