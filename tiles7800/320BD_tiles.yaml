@@ -4,10 +4,11 @@ palettes:
     - [180, 250, 222] # Light Turquoise
     - [164, 48, 24] # Red
     - [57, 178, 172] # Dark Turquoise
-  - name: whiteblue
+  - name: whiteblueorange
     colors:
     - [13, 0, 255] # Blue
     - [255, 255, 255] # White
+    - [255, 143, 0] # Orange
 sprite_sheets:
   - image: 320BD_tiles.png
     sprites:
@@ -18,7 +19,7 @@ sprite_sheets:
         holeydma: false
         palette_number: 4
         mode: 320D
-        palette: whiteblue
+        palette: whiteblueorange
       - name: white_objects 
         top: 16
         left: 0
@@ -26,7 +27,7 @@ sprite_sheets:
         holeydma: false
         palette_number: 4
         mode: 320D
-        palette: whiteblue
+        palette: whiteblueorange
       - name: colored_cube 
         top: 32 
         left: 0 
@@ -34,7 +35,7 @@ sprite_sheets:
         palette_number: 4
         holeydma: false
         mode: 320B
-        palette: whiteblue
+        palette: whiteblueorange
       - name: falling_water 
         top: 48 
         left: 0 
@@ -42,7 +43,7 @@ sprite_sheets:
         palette_number: 5
         holeydma: false
         mode: 320D
-        palette: whiteblue
+        palette: whiteblueorange
       - name: fire 
         top: 64
         left: 0 
