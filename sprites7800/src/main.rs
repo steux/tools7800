@@ -24,6 +24,7 @@ struct SpriteSheet {
     image: String,
     #[serde(default = "default_mode")]
     mode: String,
+    holeydma: Option<u8>,
     sprites: Vec<Sprite>
 }
 
@@ -240,20 +241,69 @@ fn main() -> Result <(), Box<dyn Error>> {
                     }
                 }
                 // Whoaw. We do have our pixels vector. Let's output it
-                if sprite.holeydma && (sprite.height == 8 || sprite.height == 16) {
+                if sprite.holeydma {
                     print!("holeydma ");
                 }
-                print!("reversed scattered({},{}) char {}[{}] = {{\n\t", sprite.height, sprite.width / pixel_width * (pixel_bits as u32) / 8, sprite.name, bytes.len());
-                for i in 0..bytes.len() - 1 {
-                    print!("0x{:02x}", bytes[i]);
-                    if (i + 1) % 16 != 0 {
-                        print!(", ");
-                    } else {
-                        print!(",\n\t");
+                let holeydmasize = if let Some(h) = sprite_sheet.holeydma { h } else if sprite.height == 8 { 8 } else { 16 };
+                if holeydmasize == 16 && sprite.height == 8 {
+                    // This is a special case: small sprite for 16 holey DMA (a bullet for instance)
+                    print!("reversed scattered(16,{}) char {}[{}] = {{\n\t", bytes.len() / 8, sprite.name, bytes.len() * 2);
+                    let mut c = 1;
+                    for i in 0..bytes.len() {
+                        print!("0x{:02x}", bytes[i]);
+                        if c % 16 != 0 {
+                            print!(", ");
+                        } else {
+                            print!(",\n\t");
+                        }
+                        c += 1;
+                    } 
+                    for _ in 0..bytes.len() - 1 {
+                        print!("0x00");
+                        if c % 16 != 0 {
+                            print!(", ");
+                        } else {
+                            print!(",\n\t");
+                        }
+                        c += 1;
+                    } 
+                    println!("0x00\n}};");
+                    if sprite.holeydma {
+                        print!("holeydma ");
                     }
-                } 
-                println!("0x{:02x}\n}};", bytes[bytes.len() - 1]);
-
+                    print!("reversed scattered(16,{}) char {}_ex[{}] = {{\n\t", bytes.len() / 8, sprite.name, bytes.len() * 2);
+                    let mut c = 1;
+                    for _ in 0..bytes.len() {
+                        print!("0x00");
+                        if c % 16 != 0 {
+                            print!(", ");
+                        } else {
+                            print!(",\n\t");
+                        }
+                        c += 1;
+                    } 
+                    for i in 0..bytes.len() - 1 {
+                        print!("0x{:02x}", bytes[i]);
+                        if c % 16 != 0 {
+                            print!(", ");
+                        } else {
+                            print!(",\n\t");
+                        }
+                        c += 1;
+                    } 
+                    println!("0x{:02x}\n}};", bytes[bytes.len() - 1]);
+                } else {
+                    print!("reversed scattered({},{}) char {}[{}] = {{\n\t", holeydmasize, bytes.len() / holeydmasize as usize, sprite.name, bytes.len());
+                    for i in 0..bytes.len() - 1 {
+                        print!("0x{:02x}", bytes[i]);
+                        if (i + 1) % 16 != 0 {
+                            print!(", ");
+                        } else {
+                            print!(",\n\t");
+                        }
+                    } 
+                    println!("0x{:02x}\n}};", bytes[bytes.len() - 1]);
+                }
             }
         }
     } 
