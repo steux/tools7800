@@ -268,30 +268,6 @@ fn main() -> Result <(), Box<dyn Error>> {
                         c += 1;
                     } 
                     println!("0x00\n}};");
-                    if sprite.holeydma {
-                        print!("holeydma ");
-                    }
-                    print!("reversed scattered(16,{}) char {}_ex[{}] = {{\n\t", bytes.len() / 8, sprite.name, bytes.len() * 2);
-                    let mut c = 1;
-                    for _ in 0..bytes.len() {
-                        print!("0x00");
-                        if c % 16 != 0 {
-                            print!(", ");
-                        } else {
-                            print!(",\n\t");
-                        }
-                        c += 1;
-                    } 
-                    for i in 0..bytes.len() - 1 {
-                        print!("0x{:02x}", bytes[i]);
-                        if c % 16 != 0 {
-                            print!(", ");
-                        } else {
-                            print!(",\n\t");
-                        }
-                        c += 1;
-                    } 
-                    println!("0x{:02x}\n}};", bytes[bytes.len() - 1]);
                 } else {
                     print!("reversed scattered({},{}) char {}[{}] = {{\n\t", holeydmasize, bytes.len() / holeydmasize as usize, sprite.name, bytes.len());
                     for i in 0..bytes.len() - 1 {
