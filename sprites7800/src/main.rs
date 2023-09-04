@@ -1,8 +1,8 @@
 use std::fs;
-use std::error::Error;
 use serde::Deserialize;
 use clap::Parser;
 use image::GenericImageView;
+use anyhow::{anyhow, Result};
 
 /// Atari 7800 tool that generates C code for sprites described in a YAML file
 #[derive(Parser, Debug)]
@@ -72,7 +72,7 @@ fn default_mode() -> String { "160A".to_string() }
 // |      | P2 = X, P1 = 1, P0 = 0 => PXC1, PXC2, PXC3 with BG on the right 
 // |      | P2 = X, P1 = 1, P0 = 1 => PXC1, PXC3
 
-fn main() -> Result <(), Box<dyn Error>> {
+fn main() -> Result<()> {
     let args = Args::parse();
     let contents = fs::read_to_string(args.filename).expect("Unable to read input file");
     let all_sprites: AllSprites = serde_yaml::from_str(&contents)?;
@@ -101,7 +101,7 @@ fn main() -> Result <(), Box<dyn Error>> {
                     "320B" => 3,
                     "320C" => 4,
                     "320D" => 1,
-                    _ => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Unknown gfx {} mode", mode))))
+                    _ => return Err(anyhow!("Unknown gfx {} mode", mode))
                 };
 
                 let mut colors = [(0u8, 0u8, 0u8);12];
@@ -136,7 +136,7 @@ fn main() -> Result <(), Box<dyn Error>> {
                                 if !(colorr[3] == 0 || (colorr[0] == 0 && colorr[1] == 0 && colorr[2] == 0)) {
                                     // This is not background
                                     if colorr != color {
-                                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Two consecutive pixels have a different color in 320C mode (x = {}, y = {})", x * 2, y))));
+                                        return Err(anyhow!("Two consecutive pixels have a different color in 320C mode (x = {}, y = {})", x * 2, y));
                                     }
                                 }
                             }
@@ -160,7 +160,7 @@ fn main() -> Result <(), Box<dyn Error>> {
                                 }
                                 if cx.is_none() {
                                     println!("Unexpected color {:?} found at {},{}", color, sprite.left + x * pixel_width, sprite.top + y);
-                                    panic!("Sprite {} has more than {} colors", sprite.name, maxcolors);
+                                    return Err(anyhow!("Sprite {} has more than {} colors", sprite.name, maxcolors));
                                 }
                             }
                         }
@@ -269,16 +269,41 @@ fn main() -> Result <(), Box<dyn Error>> {
                     } 
                     println!("0x00\n}};");
                 } else {
-                    print!("reversed scattered({},{}) char {}[{}] = {{\n\t", holeydmasize, bytes.len() / holeydmasize as usize, sprite.name, bytes.len());
-                    for i in 0..bytes.len() - 1 {
-                        print!("0x{:02x}", bytes[i]);
-                        if (i + 1) % 16 != 0 {
+                    let nb_sprites = sprite.height / holeydmasize as u32;
+                    if nb_sprites * holeydmasize as u32 != sprite.height {
+                        return Err(anyhow!("Sprite {}: height not propportional to 8 or 16", sprite.name));
+                    }
+                    let mut c = 0;
+                    let l = bytes.len() / nb_sprites as usize;
+                    print!("reversed scattered({},{}) char {}[{}] = {{\n\t", holeydmasize, l / holeydmasize as usize, sprite.name, l);
+                    for _ in 0..l - 1 {
+                        print!("0x{:02x}", bytes[c]);
+                        if (c + 1) % 16 != 0 {
                             print!(", ");
                         } else {
                             print!(",\n\t");
                         }
+                        c += 1;
                     } 
-                    println!("0x{:02x}\n}};", bytes[bytes.len() - 1]);
+                    println!("0x{:02x}\n}};", bytes[c]);
+                    c += 1;
+                    for i in 1..nb_sprites {
+                        if sprite.holeydma {
+                            print!("holeydma ");
+                        }
+                        print!("reversed scattered({},{}) char {}_{}[{}] = {{\n\t", holeydmasize, l / holeydmasize as usize, sprite.name, i, l);
+                        for _ in 0..l - 1 {
+                            print!("0x{:02x}", bytes[c]);
+                            if (c + 1) % 16 != 0 {
+                                print!(", ");
+                            } else {
+                                print!(",\n\t");
+                            }
+                            c += 1;
+                        } 
+                        println!("0x{:02x}\n}};", bytes[c]);
+                        c += 1;
+                    }
                 }
             }
         }

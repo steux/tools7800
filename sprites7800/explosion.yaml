@@ -1,0 +1,50 @@
+palettes:
+  - name: fire
+    colors:
+    - [255, 241, 0] # Yellow
+    - [255, 143, 0] # Orange
+    - [255, 0, 0] # Red
+sprite_sheets:
+  - image: missile.png
+    holeydma: 16
+    sprites:
+      - name: missile
+        top: 0
+        left: 0
+        height: 8
+        width: 8
+        palette: fire
+  - image: explosion.png
+    holeydma: 16
+    sprites:
+      - name: explosion1 
+        top: 0
+        left: 0
+        height: 48
+        width: 48 
+        palette: fire
+      - name: explosion2 
+        top: 0
+        left: 48 
+        height: 48
+        width: 48
+        palette: fire
+      - name: explosion3 
+        top: 0
+        left: 96
+        height: 48
+        width: 48
+        palette: fire
+      - name: explosion4 
+        top: 0
+        left: 144
+        height: 48
+        width: 48
+        palette: fire
+      - name: explosion5 
+        top: 0
+        left: 192
+        height: 48
+        width: 48
+        palette: fire
+
