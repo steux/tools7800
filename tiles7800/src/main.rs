@@ -161,7 +161,8 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                             let y = tile.top / tileheight;
                                             let x = tile.left / tilewidth;
                                             let ix = 1 + x + y * image_width / tilewidth;
-                                            let nbtiles = tile.width / tilewidth;
+                                            let nbtilesx = tile.width / tilewidth;
+                                            let nbtilesy = tile.height / tileheight;
                                             let palette_number = if let Some(p) = tile.palette_number { p } else { 0 }; 
                                             let mut idx = if let Some(alias) = &tile.alias {
                                                 if let Some(i) = aliases.get(alias.as_str()) {
@@ -170,12 +171,14 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                                     return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Bad alias")));
                                                 }
                                             } else { index };
-                                            for i in 0..nbtiles {
-                                                tiles.insert(ix + i, Tile {
-                                                    index: idx, mode, palette_number
-                                                });
-                                                index += tile_bytes;
-                                                idx += tile_bytes;
+                                            for j in 0..nbtilesy {
+                                                for i in 0..nbtilesx {
+                                                    tiles.insert(ix + i + j * image_width / tilewidth, Tile {
+                                                        index: idx, mode, palette_number
+                                                    });
+                                                    index += tile_bytes;
+                                                    idx += tile_bytes;
+                                                }
                                             }
                                         }
                                     }
@@ -189,7 +192,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                         let mut tileset = Vec::<Tile>::new();
                                         let mut startx = 0;
                                         for x in 0..width {
-                                            let cell = array[y * height + x];
+                                            let cell = array[y * width + x];
                                             if cell == 0 {
                                                 if !tileset.is_empty() {
                                                     tilesets.push((startx, tileset));
@@ -279,11 +282,17 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                             println!("96, 0xff}};");
                                         }
                                     }
-                                    print!("const char tilemap_data[{}] = {{", height * 2);
+                                    print!("const char tilemap_data_ptrs_high[{}] = {{", height);
                                     for y in 0..height - 1 {
-                                        print!("tilemap_{}_data & 0xff, tilemap_{}_data >> 8, ", y, y);
+                                        print!("tilemap_{}_data >> 8, ", y);
                                     }
-                                    println!("tilemap_{}_data & 0xff, tilemap_{}_data >> 8}};\n", height - 1, height - 1);
+                                    println!("tilemap_{}_data >> 8}};\n", height - 1);
+                                    print!("const char tilemap_data_ptrs_low[{}] = {{", height);
+                                    for y in 0..height - 1 {
+                                        print!("tilemap_{}_data & 0xff, ", y);
+                                    }
+                                    println!("tilemap_{}_data & 0xff}};\n", height - 1);
+                                    println!("const char *tilemap_data_ptrs[2] = {{tilemap_data_ptrs_high, tilemap_data_ptrs_low}};\n");
                                     println!("#define TILING_HEIGHT {}", height);
                                     println!("#define TILING_WIDTH {}", width);
                                     println!("#include \"sparse_tiling.h\"\n");
@@ -302,7 +311,9 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                             print!("\n\t");
                                         }
                                         for j in 0..width {
-                                            print!("{}{} ", (array[i * height + j] - 1) * 2,
+                                            let v = array[i * width + j];
+                                            let w = if v == 0 { 0 } else { (v - 1) * 2 };
+                                            print!("{}{} ", w,
                                             if args.boundaries || i != height - 1 || j != width - 1 {","} else {""}
                                             );
                                         }

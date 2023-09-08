@@ -1,0 +1,45 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "schmup.tmx",
+    "expandedProjectPaths": [
+        ".",
+        "target"
+    ],
+    "fileStates": {
+        "schmup.tmx": {
+            "scale": 1,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 81,
+                "y": 3587
+            }
+        },
+        "schmup.tsx": {
+            "scaleInDock": 2,
+            "scaleInEditor": 1
+        }
+    },
+    "last.imagePath": "/home/steux/git/tools7800/tiles7800",
+    "map.height": 256,
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 16,
+    "map.tileWidth": 16,
+    "map.width": 20,
+    "openFiles": [
+        "schmup.tsx",
+        "schmup.tmx"
+    ],
+    "project": "schmup.tiled-project",
+    "recentFiles": [
+        "schmup.tsx",
+        "schmup.tmx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    }
+}
