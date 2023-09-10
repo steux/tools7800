@@ -10,7 +10,7 @@ palettes:
     - [0, 0, 255] # Light blue
     - [0, 255, 255] # Turquoise
 sprite_sheets:
-  - image: schmup_tiles.png
+  - image: shmup_tiles.png
     sprites:
       - name: blue_objects1
         top: 0 
