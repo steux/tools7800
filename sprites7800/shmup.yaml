@@ -34,7 +34,7 @@ palettes:
     - [255, 143, 0] # Orange
     - [255, 0, 0] # Red
 sprite_sheets:
-  - image: schmup.png
+  - image: shmup.png
     holeydma: 16
     sprites:
       - name: explosion1 
@@ -116,5 +116,8 @@ sprite_sheets:
         height: 48
         palette: all
         mode: 160B
+    collisions:
+      - sprite1: bullet 
+        sprite2: spaceship
 
 
