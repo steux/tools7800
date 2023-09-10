@@ -3,23 +3,46 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "schmup.tmx",
+    "activeFile": "highres_sparse.tmx",
     "expandedProjectPaths": [
         ".",
         "target"
     ],
     "fileStates": {
-        "schmup.tmx": {
-            "scale": 1,
+        "highres_sparse.tmx": {
+            "scale": 1.1912109375,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 81,
-                "y": 3587
+                "x": 256.04197409411375,
+                "y": 256.04197409411375
+            }
+        },
+        "highres_tiles.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "schmup.tmx": {
+            "scale": 1.5,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 160.66666666666666,
+                "y": 97.33333333333334
             }
         },
         "schmup.tsx": {
             "scaleInDock": 2,
             "scaleInEditor": 1
+        },
+        "sparse.tmx": {
+            "scale": 1.1912109375,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 256.04197409411375,
+                "y": 256.04197409411375
+            }
+        },
+        "test.tsx": {
+            "scaleInDock": 1
         }
     },
     "last.imagePath": "/home/steux/git/tools7800/tiles7800",
@@ -30,12 +53,18 @@
     "map.width": 20,
     "openFiles": [
         "schmup.tsx",
-        "schmup.tmx"
+        "schmup.tmx",
+        "sparse.tmx",
+        "highres_tiles.tsx",
+        "highres_sparse.tmx"
     ],
     "project": "schmup.tiled-project",
     "recentFiles": [
         "schmup.tsx",
-        "schmup.tmx"
+        "schmup.tmx",
+        "sparse.tmx",
+        "highres_tiles.tsx",
+        "highres_sparse.tmx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {

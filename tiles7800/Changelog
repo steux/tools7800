@@ -1,6 +1,7 @@
 v0.3 (09/08/2023) :
 	- Big bug correction when width != height
 	- Modified code generation for sparse tiling in order to support up to 256 high maps
+	- Added more tiles compression
 
 v0.2 :
 	- Added sparse tiling support

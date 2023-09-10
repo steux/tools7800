@@ -186,6 +186,10 @@ fn main() -> Result <(), Box<dyn error::Error>>
 
                                     // Generate the C code for the the sparse tiles
                                     // to be used with sparse_tiling.h header
+                                    let mut tiles_store = Vec::<(String, Vec::<u32>)>::new();
+                                    let mut tilesmap_store = Vec::<(String, String)>::new();
+                                    let mut tilesmap = Vec::<String>::new();
+
                                     for y in 0..height {
                                         // For each line, find the tilesets 
                                         let mut tilesets = Vec::<(u32, Vec::<Tile>)>::new();
@@ -247,6 +251,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                         {
                                             let mut c = 0;
                                             let mut w = Vec::new();
+                                            let mut tile_names = Vec::new();
                                             for s in &tilesets {
                                                 let mut tn = Vec::new();
                                                 for t in &s.1 {
@@ -260,38 +265,67 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                                     }
                                                 }
                                                 w.push(tn.len());
-                                                print!("const char tilemap_{}_{}[{}] = {{", y, c, tn.len());
-                                                for i in 0..tn.len() - 1 {
-                                                    print!("{}, ", tn[i]);
+                                                
+                                                // 1st optimization : look in the tiles_store if it's already there
+                                                let mut found = None;
+                                                for c in &tiles_store {
+                                                    if c.1 == tn {
+                                                        found = Some(c.0.clone());
+                                                    }
                                                 }
-                                                println!("{}}};", tn[tn.len() - 1]);
-                                                c += 1;
+                                                if let Some(name) = found {
+                                                    tile_names.push(name);
+                                                } else {
+                                                    let name = format!("tilemap_{}_{}", y, c);
+                                                    print!("const char {}[{}] = {{", &name, tn.len());
+                                                    for i in 0..tn.len() - 1 {
+                                                        print!("{}, ", tn[i]);
+                                                    }
+                                                    println!("{}}};", tn[tn.len() - 1]);
+                                                    c += 1;
+                                                    tiles_store.push((name.clone(), tn));
+                                                    tile_names.push(name);
+                                                }
                                             }
                                             c = 0;
-                                            print!("const char tilemap_{}_data[] = {{", y);
+                                            let mut tilemap_str = String::new();
                                             for s in &tilesets {
                                                 let ttype = s.1.first().unwrap();
                                                 let write_mode = match ttype.mode {
                                                     "160A" | "320A" | "320D" => 0x60,
                                                     _ => 0xE0,
                                                 };
-                                                print!("{}, {}, tilemap_{y}_{c}, 0x{:02x}, tilemap_{y}_{c} >> 8, ({} << 5) | ((-{}) & 0x1f), {}, ", 
-                                                    s.0 + s.1.len() as u32 - 1, s.0, write_mode, ttype.palette_number, w[c], (10 + 3 + 9 * w[c]) / 2);
+                                                tilemap_str.push_str(&format!("{}, {}, {}, 0x{:02x}, {} >> 8, ({} << 5) | ((-{}) & 0x1f), {}, ", 
+                                                    s.0 + s.1.len() as u32 - 1, s.0, tile_names[c], write_mode, tile_names[c], ttype.palette_number, w[c], (10 + 3 + 9 * w[c]) / 2));
                                                 c += 1;
                                             }
-                                            println!("96, 0xff}};");
+
+                                            let mut found = None;
+                                            for c in &tilesmap_store {
+                                                if c.1 == tilemap_str {
+                                                    found = Some(c.0.clone());
+                                                }
+                                            }
+                                            if let Some(name) = found {
+                                                tilesmap.push(name);
+                                            } else {
+                                                let tilemap_name = format!("tilemap_{}_data", y);
+                                                println!("const char {}[] = {{{}96, 0xff}};", &tilemap_name, tilemap_str);
+                                                tilesmap_store.push((tilemap_name.clone(), tilemap_str.clone()));
+                                                tilesmap.push(tilemap_name);
+                                            }
                                         }
                                     }
-                                    print!("const char tilemap_data_ptrs_high[{}] = {{", height);
+                                    print!("\nconst char tilemap_data_ptrs_high[{}] = {{", height);
                                     for y in 0..height - 1 {
-                                        print!("tilemap_{}_data >> 8, ", y);
+                                        print!("{} >> 8, ", &tilesmap[y]);
                                     }
-                                    println!("tilemap_{}_data >> 8}};\n", height - 1);
+                                    println!("{} >> 8}};\n", &tilesmap[height - 1]);
                                     print!("const char tilemap_data_ptrs_low[{}] = {{", height);
                                     for y in 0..height - 1 {
-                                        print!("tilemap_{}_data & 0xff, ", y);
+                                        print!("{} & 0xff, ", &tilesmap[y]);
                                     }
-                                    println!("tilemap_{}_data & 0xff}};\n", height - 1);
+                                    println!("{} & 0xff}};\n", &tilesmap[height - 1]);
                                     println!("const char *tilemap_data_ptrs[2] = {{tilemap_data_ptrs_high, tilemap_data_ptrs_low}};\n");
                                     println!("#define TILING_HEIGHT {}", height);
                                     println!("#define TILING_WIDTH {}", width);
