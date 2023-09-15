@@ -1,3 +1,6 @@
+v0.3.1 (09/10/2023) :
+  - Oops. Forgot 0x in code generation for collisions
+
 v0.3.0 (09/10/2023) :
   - Added support for sprite collision maps
 

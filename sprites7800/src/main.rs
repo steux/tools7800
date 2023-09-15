@@ -397,7 +397,7 @@ fn main() -> Result<()> {
                     }*/
                     // Store it in binary format
                     let w = (w1 + w2 - 1) / 8 + 1;
-                    print!("\nchar collision_{}_{}[{}]={{", &sp1.name, &sp2.name, w * (h1 + h2 - 1));
+                    print!("\nconst char collision_{}_{}[{}] = {{", &sp1.name, &sp2.name, w * (h1 + h2 - 1));
                     let mut c = w * (h1 + h2 - 1);
                     for y in 0..h1 + h2 - 1 {
                         for wc in 0..w {
@@ -410,7 +410,7 @@ fn main() -> Result<()> {
                                     }
                                 }
                             }
-                            print!("{:02x}", b);
+                            print!("0x{:02x}", b);
                             c -= 1;
                             if c != 0 {
                                 print!(", ");
