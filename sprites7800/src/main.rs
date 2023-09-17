@@ -26,7 +26,7 @@ struct SpriteSheet {
     mode: String,
     holeydma: Option<u8>,
     sprites: Vec<Sprite>,
-    collisions: Vec<Collision>
+    collisions: Option<Vec<Collision>>
 }
 
 #[derive(Debug, Deserialize)]
@@ -317,112 +317,115 @@ fn main() -> Result<()> {
         }
 
         // Generate collisions data
-        for collision in sprite_sheet.collisions.clone() {
-            let mut s1 = None;
-            let mut s2 = None;
-            for s in &sprite_sheet.sprites {
-                if s.name == collision.sprite1 {
-                    s1 = Some(s);
+        if let Some(collisions) = sprite_sheet.collisions {
+            for collision in collisions.clone() {
+                let mut s1 = None;
+                let mut s2 = None;
+                for s in &sprite_sheet.sprites {
+                    if s.name == collision.sprite1 {
+                        s1 = Some(s);
+                    }
+                    if s.name == collision.sprite2 {
+                        s2 = Some(s);
+                    }
                 }
-                if s.name == collision.sprite2 {
-                    s2 = Some(s);
-                }
-            }
-            if let Some(sp1) = s1 {
-                if let Some(sp2) = s2 {
-                    let mode = if let Some(s) = &sp1.mode { s.as_str() } else {
-                        sprite_sheet.mode.as_str()
-                    }; 
-                    let pixel_width = match mode {
-                        "320A" | "320B" | "320C" | "320D" => 1,
-                        _ => 2,
-                    };
-                    let w1 = (sp1.width / pixel_width) as usize;
-                    let w2 = (sp2.width / pixel_width) as usize;
-                    let h1 = sp1.height as usize;
-                    let h2 = sp2.height as usize;
-                    let mut s1map = vec![false;w1 * h1];
-                    // Fill s1map and s2map
-                    for y in 0..h1 {
-                        for x in 0..w1 {
-                            let color = img.get_pixel(sp1.left + x as u32 * pixel_width, sp1.top + y as u32);
-                            if color[3] != 0 && (color[0] != 0 || color[1] != 0 || color[2] != 0) {
-                                s1map[x + y * w1] = true;
+                if let Some(sp1) = s1 {
+                    if let Some(sp2) = s2 {
+                        let mode = if let Some(s) = &sp1.mode { s.as_str() } else {
+                            sprite_sheet.mode.as_str()
+                        }; 
+                        let pixel_width = match mode {
+                            "320A" | "320B" | "320C" | "320D" => 1,
+                            _ => 2,
+                        };
+                        let w1 = (sp1.width / pixel_width) as usize;
+                        let w2 = (sp2.width / pixel_width) as usize;
+                        let h1 = sp1.height as usize;
+                        let h2 = sp2.height as usize;
+                        let mut s1map = vec![false;w1 * h1];
+                        // Fill s1map and s2map
+                        for y in 0..h1 {
+                            for x in 0..w1 {
+                                let color = img.get_pixel(sp1.left + x as u32 * pixel_width, sp1.top + y as u32);
+                                if color[3] != 0 && (color[0] != 0 || color[1] != 0 || color[2] != 0) {
+                                    s1map[x + y * w1] = true;
+                                }
                             }
                         }
-                    }
-                    let mut s2map = vec![false;w2 * h2];
-                    for y in 0..h2 {
-                        for x in 0..w2 {
-                            let color = img.get_pixel(sp2.left + x as u32 * pixel_width, sp2.top + y as u32);
-                            if color[3] != 0 && (color[0] != 0 || color[1] != 0 || color[2] != 0) {
-                                s2map[x + y * w2] = true;
+                        let mut s2map = vec![false;w2 * h2];
+                        for y in 0..h2 {
+                            for x in 0..w2 {
+                                let color = img.get_pixel(sp2.left + x as u32 * pixel_width, sp2.top + y as u32);
+                                if color[3] != 0 && (color[0] != 0 || color[1] != 0 || color[2] != 0) {
+                                    s2map[x + y * w2] = true;
+                                }
                             }
                         }
-                    }
-                    // Ok, now we can compute the collision map
-                    let mut cmap = vec![false;(w1 + w2 - 1) * (h1 + h2 - 1)];
-                    for y in 0..(h1 + h2 - 1) {
-                        for x in 0..(w1 + w2 - 1) {
-                            for y1 in 0..h1 {
-                                for x1 in 0..w1 {
-                                    if s1map[x1 + y1 * w1] {
-                                        // Check in s2map
-                                        let x2 = (x1 + x) as i32 - w1 as i32 + 1;
-                                        let y2 = (y1 + y) as i32 - h1 as i32 + 1;
-                                        if x2 >= 0 && x2 < w2 as i32 && y2 >= 0 && y2 < h2 as i32 {
-                                            if s2map[x2 as usize + y2 as usize * w2 ] {
-                                                cmap[x + y * (w1 + w2 - 1)] = true;
-                                                break;
+                        // Ok, now we can compute the collision map
+                        let mut cmap = vec![false;(w1 + w2 - 1) * (h1 + h2 - 1)];
+                        for y in 0..(h1 + h2 - 1) {
+                            for x in 0..(w1 + w2 - 1) {
+                                for y1 in 0..h1 {
+                                    for x1 in 0..w1 {
+                                        if s1map[x1 + y1 * w1] {
+                                            // Check in s2map
+                                            let x2 = (x1 + x) as i32 - w1 as i32 + 1;
+                                            let y2 = (y1 + y) as i32 - h1 as i32 + 1;
+                                            if x2 >= 0 && x2 < w2 as i32 && y2 >= 0 && y2 < h2 as i32 {
+                                                if s2map[x2 as usize + y2 as usize * w2 ] {
+                                                    cmap[x + y * (w1 + w2 - 1)] = true;
+                                                    break;
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                    // Debug print of the collision map :
-                    /*
-                    let mut i = 0;
-                    for c in &cmap {
-                        if i % (w1 + w2 - 1) == 0 {
-                            print!("\n");
-                        } 
-                        if *c {
-                            print!("***");
-                        } else {
-                            print!("   ");
-                        }
-                        i += 1;
-                    }*/
-                    // Store it in binary format
-                    let w = (w1 + w2 - 1) / 8 + 1;
-                    print!("\nconst char collision_{}_{}[{}] = {{", &sp1.name, &sp2.name, w * (h1 + h2 - 1));
-                    let mut c = w * (h1 + h2 - 1);
-                    for y in 0..h1 + h2 - 1 {
-                        for wc in 0..w {
-                            let mut b: u8 = 0;
-                            for x in 0..8 {
-                                b <<= 1;
-                                if x + wc * 8 < w1 + w2 - 1 {
-                                    if cmap[y * (w1 + w2 - 1) + x + wc * 8] {
-                                        b |= 1;
+                        // Debug print of the collision map :
+                        /*
+                           let mut i = 0;
+                           for c in &cmap {
+                           if i % (w1 + w2 - 1) == 0 {
+                           print!("\n");
+                           } 
+                           if *c {
+                           print!("***");
+                           } else {
+                           print!("   ");
+                           }
+                           i += 1;
+                           }*/
+                        // Store it in binary format
+                        let w = (w1 + w2 - 1) / 8 + 1;
+                        print!("\nconst char collision_{}_{}[{}] = {{", &sp1.name, &sp2.name, w * (h1 + h2 - 1));
+                        let mut c = w * (h1 + h2 - 1);
+                        for y in 0..h1 + h2 - 1 {
+                            for wc in 0..w {
+                                let mut b: u8 = 0;
+                                for x in 0..8 {
+                                    b <<= 1;
+                                    if x + wc * 8 < w1 + w2 - 1 {
+                                        if cmap[y * (w1 + w2 - 1) + x + wc * 8] {
+                                            b |= 1;
+                                        }
                                     }
                                 }
-                            }
-                            print!("0x{:02x}", b);
-                            c -= 1;
-                            if c != 0 {
-                                print!(", ");
+                                print!("0x{:02x}", b);
+                                c -= 1;
+                                if c != 0 {
+                                    print!(", ");
+                                }
                             }
                         }
-                    }
-                    println!("}};");
+                        println!("}};");
+                    } else {
+                        return Err(anyhow!("Collision computation: Unknown sprite2 {}", collision.sprite1));
+                    } 
                 } else {
-                    return Err(anyhow!("Collision computation: Unknown sprite2 {}", collision.sprite1));
-                } 
-            } else {
-                return Err(anyhow!("Collision computation: Unknown sprite1 {}", collision.sprite1));
+                    return Err(anyhow!("Collision computation: Unknown sprite1 {}", collision.sprite1));
+                }
+
             }
         }
     } 

@@ -3,18 +3,18 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "highres_sparse.tmx",
+    "activeFile": "shmup.tmx",
     "expandedProjectPaths": [
-        ".",
-        "target"
+        "target",
+        "."
     ],
     "fileStates": {
         "highres_sparse.tmx": {
             "scale": 1.1912109375,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 256.04197409411375,
-                "y": 256.04197409411375
+                "x": 255.20249221183798,
+                "y": 255.20249221183798
             }
         },
         "highres_tiles.tsx": {
@@ -30,7 +30,21 @@
             }
         },
         "schmup.tsx": {
+            "dynamicWrapping": true,
             "scaleInDock": 2,
+            "scaleInEditor": 1
+        },
+        "shmup.tmx": {
+            "scale": 1.5,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 155.33333333333331,
+                "y": 3667.333333333333
+            }
+        },
+        "shmup.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
             "scaleInEditor": 1
         },
         "sparse.tmx": {
@@ -38,13 +52,14 @@
             "selectedLayer": 0,
             "viewCenter": {
                 "x": 256.04197409411375,
-                "y": 256.04197409411375
+                "y": 255.62223315297592
             }
         },
         "test.tsx": {
             "scaleInDock": 1
         }
     },
+    "last.externalTilesetPath": "/home/steux/git/tools7800/tiles7800",
     "last.imagePath": "/home/steux/git/tools7800/tiles7800",
     "map.height": 256,
     "map.lastUsedFormat": "tmx",
@@ -52,19 +67,21 @@
     "map.tileWidth": 16,
     "map.width": 20,
     "openFiles": [
-        "schmup.tsx",
-        "schmup.tmx",
         "sparse.tmx",
         "highres_tiles.tsx",
-        "highres_sparse.tmx"
+        "highres_sparse.tmx",
+        "shmup.tmx",
+        "shmup.tsx"
     ],
-    "project": "schmup.tiled-project",
+    "project": "shmup.tiled-project",
     "recentFiles": [
-        "schmup.tsx",
-        "schmup.tmx",
         "sparse.tmx",
         "highres_tiles.tsx",
-        "highres_sparse.tmx"
+        "highres_sparse.tmx",
+        "shmup.tsx",
+        "shmup.tmx",
+        "schmup.tsx",
+        "schmup.tmx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {
