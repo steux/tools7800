@@ -5,16 +5,16 @@
     },
     "activeFile": "shmup.tmx",
     "expandedProjectPaths": [
-        "target",
-        "."
+        ".",
+        "target"
     ],
     "fileStates": {
         "highres_sparse.tmx": {
             "scale": 1.1912109375,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 255.20249221183798,
-                "y": 255.20249221183798
+                "x": 289.62124938514506,
+                "y": 256.04197409411375
             }
         },
         "highres_tiles.tsx": {
@@ -35,16 +35,16 @@
             "scaleInEditor": 1
         },
         "shmup.tmx": {
-            "scale": 1.5,
+            "scale": 0.33,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 155.33333333333331,
-                "y": 3667.333333333333
+                "x": 327.27272727272725,
+                "y": 2593.939393939394
             }
         },
         "shmup.tsx": {
             "dynamicWrapping": false,
-            "scaleInDock": 1,
+            "scaleInDock": 2,
             "scaleInEditor": 1
         },
         "sparse.tmx": {
