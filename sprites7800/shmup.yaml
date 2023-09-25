@@ -16,9 +16,9 @@ palettes:
     - [255, 255, 255] # White
   - name: fire
     colors:
-    - [255, 241, 0] # Yellow
-    - [255, 143, 0] # Orange
     - [255, 0, 0] # Red
+    - [255, 143, 0] # Orange
+    - [255, 241, 0] # Yellow
   - name: all
     colors:
     - [64, 64, 64] # Dark grey
@@ -30,13 +30,26 @@ palettes:
     - [0, 128, 0] # Dark green
     - [0, 255, 0] # Light green
     - [255, 255, 255] # White
-    - [255, 241, 0] # Yellow
-    - [255, 143, 0] # Orange
     - [255, 0, 0] # Red
+    - [255, 143, 0] # Orange
+    - [255, 241, 0] # Yellow
 sprite_sheets:
   - image: shmup.png
     holeydma: 16
     sprites:
+      - name: digits 
+        top: 96
+        left: 0
+        height: 16
+        width: 160
+        palette: green
+      - name: lives 
+        top: 96
+        left: 160
+        height: 16
+        width: 48 
+        mode: 160B
+        palette: all 
       - name: explosion1 
         top: 0
         left: 0
