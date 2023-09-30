@@ -33,6 +33,7 @@ struct SpriteSheet {
     image: String,
     #[serde(default = "default_mode")]
     mode: String,
+    bank: Option<u8>,
     sprites: Vec<Sprite>
 }
 
@@ -145,7 +146,6 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                     let mut tiles = HashMap::<u32, Tile>::new();
                                     let mut aliases = HashMap::<&str, u32>::new();
                                     for tile in &tiles_sheet.sprites {
-                                        // Do not consider sprites
                                         let mode = if let Some(m) = &tile.mode { m.as_str() } else { defmode };
                                         let tile_bytes = match mode {
                                             "160A" => tilewidth / 8,
@@ -156,29 +156,27 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                             "320D" => tilewidth / 8,
                                             _ => unreachable!()
                                         };
-                                        if !tile.holeydma {
-                                            aliases.insert(&tile.name.as_str(), index);
-                                            let y = tile.top / tileheight;
-                                            let x = tile.left / tilewidth;
-                                            let ix = 1 + x + y * image_width / tilewidth;
-                                            let nbtilesx = tile.width / tilewidth;
-                                            let nbtilesy = tile.height / tileheight;
-                                            let palette_number = if let Some(p) = tile.palette_number { p } else { 0 }; 
-                                            let mut idx = if let Some(alias) = &tile.alias {
-                                                if let Some(i) = aliases.get(alias.as_str()) {
-                                                    *i
-                                                } else {
-                                                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Bad alias")));
-                                                }
-                                            } else { index };
-                                            for j in 0..nbtilesy {
-                                                for i in 0..nbtilesx {
-                                                    tiles.insert(ix + i + j * image_width / tilewidth, Tile {
-                                                        index: idx, mode, palette_number
-                                                    });
-                                                    index += tile_bytes;
-                                                    idx += tile_bytes;
-                                                }
+                                        aliases.insert(&tile.name.as_str(), index);
+                                        let y = tile.top / tileheight;
+                                        let x = tile.left / tilewidth;
+                                        let ix = 1 + x + y * image_width / tilewidth;
+                                        let nbtilesx = tile.width / tilewidth;
+                                        let nbtilesy = tile.height / tileheight;
+                                        let palette_number = if let Some(p) = tile.palette_number { p } else { 0 }; 
+                                        let mut idx = if let Some(alias) = &tile.alias {
+                                            if let Some(i) = aliases.get(alias.as_str()) {
+                                                *i
+                                            } else {
+                                                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Bad alias")));
+                                            }
+                                        } else { index };
+                                        for j in 0..nbtilesy {
+                                            for i in 0..nbtilesx {
+                                                tiles.insert(ix + i + j * image_width / tilewidth, Tile {
+                                                    index: idx, mode, palette_number
+                                                });
+                                                index += tile_bytes;
+                                                idx += tile_bytes;
                                             }
                                         }
                                     }
@@ -277,6 +275,9 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                                     tile_names.push(name);
                                                 } else {
                                                     let name = format!("tilemap_{}_{}", y, c);
+                                                    if let Some(b) = tiles_sheet.bank {
+                                                        print!("bank{b} ");
+                                                    }
                                                     print!("const char {}[{}] = {{", &name, tn.len());
                                                     for i in 0..tn.len() - 1 {
                                                         print!("{}, ", tn[i]);
@@ -310,26 +311,39 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                                 tilesmap.push(name);
                                             } else {
                                                 let tilemap_name = format!("tilemap_{}_data", y);
+                                                if let Some(b) = tiles_sheet.bank {
+                                                    print!("bank{b} ");
+                                                }
                                                 println!("const char {}[] = {{{}96, 0xff}};", &tilemap_name, tilemap_str);
                                                 tilesmap_store.push((tilemap_name.clone(), tilemap_str.clone()));
                                                 tilesmap.push(tilemap_name);
                                             }
                                         }
                                     }
-                                    print!("\nconst char tilemap_data_ptrs_high[{}] = {{", height);
+                                    print!("\n");
+                                    if let Some(b) = tiles_sheet.bank {
+                                        print!("bank{b} ");
+                                    }
+                                    print!("const char tilemap_data_ptrs_high[{}] = {{", height);
                                     for y in 0..height - 1 {
                                         print!("{} >> 8, ", &tilesmap[y]);
                                     }
                                     println!("{} >> 8}};\n", &tilesmap[height - 1]);
+                                    if let Some(b) = tiles_sheet.bank {
+                                        print!("bank{b} ");
+                                    }
                                     print!("const char tilemap_data_ptrs_low[{}] = {{", height);
                                     for y in 0..height - 1 {
                                         print!("{} & 0xff, ", &tilesmap[y]);
                                     }
                                     println!("{} & 0xff}};\n", &tilesmap[height - 1]);
+                                    if let Some(b) = tiles_sheet.bank {
+                                        print!("bank{b} ");
+                                    }
                                     println!("const char *tilemap_data_ptrs[2] = {{tilemap_data_ptrs_high, tilemap_data_ptrs_low}};\n");
-                                    println!("#define TILING_HEIGHT {}", height);
+                                    println!("/*\n#define TILING_HEIGHT {}", height);
                                     println!("#define TILING_WIDTH {}", width);
-                                    println!("#include \"sparse_tiling.h\"\n");
+                                    println!("#include \"sparse_tiling.h\"\n*/\n");
 
                                 } else {
                                     print!("const char tilemap[{}] = {{", 

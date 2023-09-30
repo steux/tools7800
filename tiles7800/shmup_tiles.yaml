@@ -11,6 +11,7 @@ palettes:
     - [0, 255, 255] # Turquoise
 sprite_sheets:
   - image: shmup_tiles.png
+    bank: 1
     sprites:
       - name: blue_objects1
         top: 0 

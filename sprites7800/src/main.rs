@@ -25,6 +25,7 @@ struct SpriteSheet {
     #[serde(default = "default_mode")]
     mode: String,
     holeydma: Option<u8>,
+    bank: Option<u8>,
     sprites: Vec<Sprite>,
     collisions: Option<Vec<Collision>>
 }
@@ -252,6 +253,9 @@ fn main() -> Result<()> {
                 if sprite.holeydma {
                     print!("holeydma ");
                 }
+                if let Some(b) = sprite_sheet.bank {
+                    print!("bank{} ", b);
+                }
                 let holeydmasize = if let Some(h) = sprite_sheet.holeydma { h } else if sprite.height == 8 { 8 } else { 16 };
                 if holeydmasize == 16 && sprite.height == 8 {
                     // This is a special case: small sprite for 16 holey DMA (a bullet for instance)
@@ -298,6 +302,9 @@ fn main() -> Result<()> {
                     for i in 1..nb_sprites {
                         if sprite.holeydma {
                             print!("holeydma ");
+                        }
+                        if let Some(b) = sprite_sheet.bank {
+                            print!("bank{} ", b);
                         }
                         print!("reversed scattered({},{}) char {}_{}[{}] = {{\n\t", holeydmasize, l / holeydmasize as usize, sprite.name, i, l);
                         for _ in 0..l - 1 {

@@ -1,3 +1,6 @@
+v0.3.1 (09/28/2023) :
+	- Added bank code generation 
+
 v0.3 (09/08/2023) :
 	- Big bug correction when width != height
 	- Modified code generation for sparse tiling in order to support up to 256 high maps

@@ -34,6 +34,16 @@ palettes:
     - [255, 143, 0] # Orange
     - [255, 241, 0] # Yellow
 sprite_sheets:
+  - image: shmup_enemies.png
+    bank: 1
+    sprites:
+      - name: boss
+        top: 0
+        left: 0
+        height: 48 
+        width: 48
+        palette: all
+        mode: 160B
   - image: shmup.png
     holeydma: 16
     sprites:
@@ -122,15 +132,24 @@ sprite_sheets:
         width: 16 
         height: 8
         palette: fire
-      - name: boss
+      - name: skull
         top: 48
         left: 96
-        width: 48
+        width: 64 
         height: 48
-        palette: all
-        mode: 160B
+        palette: grey 
     collisions:
       - sprite1: bullet 
         sprite2: spaceship
-
-
+  - image: gameover.png
+    sprites:
+      - name: game
+        top: 0
+        left: 0
+        height: 16
+        width: 72
+      - name: over 
+        top: 0
+        left: 72 
+        height: 16
+        width: 72
