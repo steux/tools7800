@@ -33,6 +33,11 @@ palettes:
     - [255, 0, 0] # Red
     - [255, 143, 0] # Orange
     - [255, 241, 0] # Yellow
+  - name: gameover
+    colors:
+    - [255, 21, 17] # Red
+    - [255, 98, 96] # Orange
+    - [255, 255, 255] # White
 sprite_sheets:
   - image: shmup_enemies.png
     bank: 1
@@ -132,6 +137,24 @@ sprite_sheets:
         width: 16 
         height: 8
         palette: fire
+      - name: small_explosion1
+        top: 64
+        left: 32
+        width: 16 
+        height: 16
+        palette: fire
+      - name: small_explosion2 
+        top: 64
+        left: 48 
+        width: 16 
+        height: 16
+        palette: fire
+      - name: small_explosion3 
+        top: 64
+        left: 64 
+        width: 16 
+        height: 16
+        palette: fire
       - name: skull
         top: 48
         left: 96
@@ -148,8 +171,10 @@ sprite_sheets:
         left: 0
         height: 16
         width: 72
+        palette: gameover
       - name: over 
         top: 0
         left: 72 
         height: 16
         width: 72
+        palette: gameover
