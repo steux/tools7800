@@ -1,3 +1,7 @@
+v0.3.2 (10/09/2023) :
+	- Added background keyword support
+	- Changed generated table name
+
 v0.3.1 (09/28/2023) :
 	- Added bank code generation 
 

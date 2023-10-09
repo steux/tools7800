@@ -17,7 +17,13 @@ struct Args {
     filename: String,
     /// Sparse tiling code generation (provide yaml file)
     #[arg(long = "sparse")]
-    yaml: Option<String>
+    yaml: Option<String>,
+    /// Generated array name (default: tilemap)
+    #[arg(short, long)]
+    varname: Option<String>,
+    /// Tileset maximum size 
+    #[arg(short, long)]
+    maxsize: Option<usize>
 }
 
 #[allow(unused)]
@@ -62,7 +68,9 @@ struct Sprite {
     #[serde(default)]
     palette_number: Option<u8>,
     #[serde(default)]
-    alias: Option<String>
+    alias: Option<String>,
+    #[serde(default)]
+    background: Option<String>
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -70,6 +78,7 @@ struct Tile<'a> {
     index: u32,
     mode: &'a str,
     palette_number: u8,
+    background: Option<u32>
 }
 
 fn default_sprite_size() -> u32 { 16 }
@@ -84,6 +93,9 @@ fn main() -> Result <(), Box<dyn error::Error>>
     let mut tileheight: u32 = 8;
     let args = Args::parse();
     let xml = fs::read_to_string(args.filename).expect("Unable to read input file");
+    let varname = args.varname.unwrap_or("tilemap".into());
+    let tileset_maxsize = args.maxsize.unwrap_or(256 as usize);
+    
     let dom = xml_dom::parser::read_xml(&xml)?;
     let root = dom.first_child().unwrap();
     if root.local_name() == "map" {
@@ -145,6 +157,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                     let defmode = tiles_sheet.mode.as_str();
                                     let mut tiles = HashMap::<u32, Tile>::new();
                                     let mut aliases = HashMap::<&str, u32>::new();
+                                    let mut refs = HashMap::<u32, u32>::new();
                                     for tile in &tiles_sheet.sprites {
                                         let mode = if let Some(m) = &tile.mode { m.as_str() } else { defmode };
                                         let tile_bytes = match mode {
@@ -160,9 +173,11 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                         let y = tile.top / tileheight;
                                         let x = tile.left / tilewidth;
                                         let ix = 1 + x + y * image_width / tilewidth;
+                                        refs.insert(index, ix);
                                         let nbtilesx = tile.width / tilewidth;
                                         let nbtilesy = tile.height / tileheight;
                                         let palette_number = if let Some(p) = tile.palette_number { p } else { 0 }; 
+                                        let background = if let Some(b) = &tile.background { aliases.get(b.as_str()).copied() } else { None };
                                         let mut idx = if let Some(alias) = &tile.alias {
                                             if let Some(i) = aliases.get(alias.as_str()) {
                                                 *i
@@ -173,7 +188,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                         for j in 0..nbtilesy {
                                             for i in 0..nbtilesx {
                                                 tiles.insert(ix + i + j * image_width / tilewidth, Tile {
-                                                    index: idx, mode, palette_number
+                                                    index: idx, mode, palette_number, background
                                                 });
                                                 index += tile_bytes;
                                                 idx += tile_bytes;
@@ -183,7 +198,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                     //println!("Tiles : {:?}", tiles);
 
                                     // Generate the C code for the the sparse tiles
-                                    // to be used with sparse_tiling.h header
+                                    // to be used with multisprite.h or sparse_tiling.h header
                                     let mut tiles_store = Vec::<(String, Vec::<u32>)>::new();
                                     let mut tilesmap_store = Vec::<(String, String)>::new();
                                     let mut tilesmap = Vec::<String>::new();
@@ -191,59 +206,198 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                     for y in 0..height {
                                         // For each line, find the tilesets 
                                         let mut tilesets = Vec::<(u32, Vec::<Tile>)>::new();
-                                        let mut tileset = Vec::<Tile>::new();
-                                        let mut startx = 0;
+                                        let mut background_tileset = Vec::<Tile>::new();
+                                        let mut foreground_tileset = Vec::<Tile>::new();
+                                        let mut deferred_tileset = Vec::<Vec::<Tile>>::new();
+                                        let mut background_startx = 0;
+                                        let mut foreground_startx = 0;
+                                        let mut deferred_startx = Vec::<u32>::new();
                                         for x in 0..width {
                                             let cell = array[y * width + x];
                                             if cell == 0 {
-                                                if !tileset.is_empty() {
-                                                    tilesets.push((startx, tileset));
-                                                    tileset = Vec::<Tile>::new();
+                                                // Empty cell
+                                                if !background_tileset.is_empty() {
+                                                    tilesets.push((background_startx, background_tileset));
+                                                    background_tileset = Vec::<Tile>::new();
                                                 }
+                                                if !foreground_tileset.is_empty() {
+                                                    tilesets.push((foreground_startx, foreground_tileset));
+                                                    foreground_tileset = Vec::<Tile>::new();
+                                                }
+                                                for i in 0..deferred_tileset.len() {
+                                                    tilesets.push((deferred_startx[i], deferred_tileset[i].clone()))
+                                                }
+                                                deferred_tileset = Vec::<Vec::<Tile>>::new();
+                                                deferred_startx = Vec::<u32>::new();
                                             } else {
-                                                if let Some(tx) = tileset.last() {
-                                                    // Is the cell compatible with the tileset in construction ?
-                                                    if let Some(t) = tiles.get(&cell) {
-                                                        if t.mode == tx.mode && t.palette_number == tx.palette_number {
-                                                            // Yes, let's add it the current tileset
-                                                            if tileset.len() >= (256 - 160)/ 8 {
-                                                                tilesets.push((startx, tileset));
-                                                                tileset = Vec::<Tile>::new();
-                                                                startx = x as u32;
+                                                if let Some(t) = tiles.get(&cell) {
+                                                    if let Some(btx) = t.background {
+                                                        let r = refs.get(&btx).unwrap(); 
+                                                        // It's a tile with background info
+                                                        if let Some(bt) = tiles.get(r) {
+                                                            // Let's check the background tile
+                                                            if let Some(tx) = background_tileset.last() {
+                                                                // Is the cell compatible with the background tileset in construction ?
+                                                                if bt.mode == tx.mode && bt.palette_number == tx.palette_number {
+                                                                    // Yes, let's add it to the current background tileset
+                                                                    if background_tileset.len() >= tileset_maxsize {
+                                                                        tilesets.push((background_startx, background_tileset));
+                                                                        background_tileset = Vec::<Tile>::new();
+                                                                        background_startx = x as u32;
+                                                                    }
+                                                                    background_tileset.push(bt.clone());
+                                                                } else {
+                                                                    // No. Let's write this background tileset
+                                                                    tilesets.push((background_startx, background_tileset));
+                                                                    background_tileset = Vec::<Tile>::new();
+                                                                    // And let's start a new background tileset
+                                                                    background_tileset.push(bt.clone());
+                                                                    background_startx = x as u32;
+                                                                }
+                                                            } else {
+                                                                // No, so start a new background tileset
+                                                                background_tileset.push(bt.clone());
+                                                                background_startx = x as u32;
                                                             }
-                                                            tileset.push(t.clone());
+                                                            // Let's check the foreground tile
+                                                            if let Some(tx) = foreground_tileset.last() {
+                                                                // Is the cell compatible with the foreground tileset in construction ?
+                                                                if t.mode == tx.mode && t.palette_number == tx.palette_number {
+                                                                    // Yes, let's add it to the current foreground tileset
+                                                                    if foreground_tileset.len() >= tileset_maxsize {
+                                                                        tilesets.push((foreground_startx, foreground_tileset));
+                                                                        foreground_tileset = Vec::<Tile>::new();
+                                                                        foreground_startx = x as u32;
+                                                                    }
+                                                                    foreground_tileset.push(t.clone());
+                                                                    //println!("foreground_tileset = {:?}", foreground_tileset);
+                                                                } else {
+                                                                    // No. Let's write this foreground tileset
+                                                                    tilesets.push((foreground_startx, foreground_tileset));
+                                                                    foreground_tileset = Vec::<Tile>::new();
+                                                                    // And let's start a new foreground tileset
+                                                                    foreground_tileset.push(t.clone());
+                                                                    foreground_startx = x as u32;
+                                                                }
+                                                            } else {
+                                                                // No, so start a new foreground tileset
+                                                                foreground_tileset.push(t.clone());
+                                                                foreground_startx = x as u32;
+                                                            }
                                                         } else {
-                                                            tilesets.push((startx, tileset));
-                                                            tileset = Vec::<Tile>::new();
-                                                            tileset.push(t.clone());
-                                                            startx = x as u32;
+                                                            // Empty cell
+                                                            if !background_tileset.is_empty() {
+                                                                tilesets.push((background_startx, background_tileset));
+                                                                background_tileset = Vec::<Tile>::new();
+                                                            }
+                                                            if !foreground_tileset.is_empty() {
+                                                                tilesets.push((foreground_startx, foreground_tileset));
+                                                                foreground_tileset = Vec::<Tile>::new();
+                                                            }
                                                         }
                                                     } else {
-                                                        //return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Wrong tilesheet. Index unknown")));
-                                                        // It's not in the tilesheet. Consider it as 0 (empty)
-                                                        if !tileset.is_empty() {
-                                                            tilesets.push((startx, tileset));
-                                                            tileset = Vec::<Tile>::new();
-                                                        }
+                                                        // It's a normal tile
+                                                        if let Some(tx) = background_tileset.last() {
+                                                            // Is the cell compatible with the background tileset in construction ?
+                                                            if t.mode == tx.mode && t.palette_number == tx.palette_number {
+                                                                // Yes, let's add it the current background tileset
+                                                                if background_tileset.len() >= tileset_maxsize {
+                                                                    tilesets.push((background_startx, background_tileset));
+                                                                    background_tileset = Vec::<Tile>::new();
+                                                                    background_startx = x as u32;
+                                                                }
+                                                                background_tileset.push(t.clone());
+                                                                // Is there a foreground tileset ?
+                                                                if !foreground_tileset.is_empty() {
+                                                                    // Yes. Let's write this foreground tileset
+                                                                    deferred_tileset.push(foreground_tileset.clone());
+                                                                    deferred_startx.push(foreground_startx);
+                                                                    //println!("deferred_tileset = {:?}", deferred_tileset);
+                                                                    foreground_tileset = Vec::<Tile>::new();
+                                                                }
+                                                            } else {
+                                                                // No. Let's write this background tileset
+                                                                tilesets.push((background_startx, background_tileset));
+                                                                background_tileset = Vec::<Tile>::new();
+                                                                // Is there a foreground tileset ?
+                                                                if let Some(tx) = foreground_tileset.last() {
+                                                                    // Yes. Is it compatible ?
+                                                                    if t.mode == tx.mode && t.palette_number == tx.palette_number {
+                                                                        // Yes, let's add it the current foreground tileset
+                                                                        if foreground_tileset.len() >= tileset_maxsize {
+                                                                            tilesets.push((foreground_startx, foreground_tileset));
+                                                                            foreground_tileset = Vec::<Tile>::new();
+                                                                            foreground_startx = x as u32;
+                                                                        }
+                                                                        foreground_tileset.push(t.clone());
+                                                                    } else {
+                                                                        // No. It's not compatible. Let's write this foreground tileset
+                                                                        tilesets.push((foreground_startx, foreground_tileset));
+                                                                        foreground_tileset = Vec::<Tile>::new();
+                                                                        // And let's start a new background tileset
+                                                                        background_tileset.push(t.clone());
+                                                                        background_startx = x as u32;
+                                                                    }
+                                                                } else {
+                                                                    // No, so start a new background tileset
+                                                                    background_tileset.push(t.clone());
+                                                                    background_startx = x as u32;
+                                                                }
+                                                            }
+                                                        } else {
+                                                            // There is no background tileset. But maybe is there a foregound tileset ?
+                                                            if let Some(tx) = foreground_tileset.last() {
+                                                                if t.mode == tx.mode && t.palette_number == tx.palette_number {
+                                                                    // Yes, let's add it the current foreground tileset
+                                                                    if foreground_tileset.len() >= tileset_maxsize {
+                                                                        tilesets.push((foreground_startx, foreground_tileset));
+                                                                        foreground_tileset = Vec::<Tile>::new();
+                                                                        foreground_startx = x as u32;
+                                                                    }
+                                                                    foreground_tileset.push(t.clone());
+                                                                } else {
+                                                                    // No, it's not compatible. Let's write the foreground tileset as it is
+                                                                    tilesets.push((foreground_startx, foreground_tileset));
+                                                                    foreground_tileset = Vec::<Tile>::new();
+                                                                    // And let's start a background tileset
+                                                                    background_tileset.push(t.clone());
+                                                                    background_startx = x as u32;
+                                                                }
+                                                            } else {
+                                                                // No there is nothing. So let's start a background tileset
+                                                                background_tileset.push(t.clone());
+                                                                background_startx = x as u32;
+                                                            }
+                                                        } 
                                                     }
                                                 } else {
-                                                    if let Some(t) = tiles.get(&cell) {
-                                                        tileset.push(t.clone());
-                                                        startx = x as u32;
-                                                    } else {
-                                                        //return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Wrong tilesheet. Index unknown")));
-                                                        // It's not in the tilesheet. Consider it as 0 (empty)
-                                                        if !tileset.is_empty() {
-                                                            tilesets.push((startx, tileset));
-                                                            tileset = Vec::<Tile>::new();
-                                                        }
+                                                    //return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Wrong tilesheet. Index unknown")));
+                                                    // It's not in the tilesheet. Consider it as 0 (empty)
+                                                    if !background_tileset.is_empty() {
+                                                        tilesets.push((background_startx, background_tileset));
+                                                        background_tileset = Vec::<Tile>::new();
                                                     }
+                                                    if !foreground_tileset.is_empty() {
+                                                        tilesets.push((foreground_startx, foreground_tileset));
+                                                        foreground_tileset = Vec::<Tile>::new();
+                                                    }
+                                                    for i in 0..deferred_tileset.len() {
+                                                        tilesets.push((deferred_startx[i], deferred_tileset[i].clone()))
+                                                    }
+                                                    deferred_tileset = Vec::<Vec::<Tile>>::new();
+                                                    deferred_startx = Vec::<u32>::new();
                                                 }
                                             }           
                                         }
-                                        // Write the last tileset
-                                        if !tileset.is_empty() {
-                                            tilesets.push((startx, tileset));
+                                        // Write the last tilesets
+                                        if !background_tileset.is_empty() {
+                                            tilesets.push((background_startx, background_tileset));
+                                        }
+                                        if !foreground_tileset.is_empty() {
+                                            tilesets.push((foreground_startx, foreground_tileset));
+                                        }
+                                        for i in 0..deferred_tileset.len() {
+                                            tilesets.push((deferred_startx[i], deferred_tileset[i].clone()));
                                         }
                                         // Write this line data
                                         {
@@ -274,7 +428,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                                 if let Some(name) = found {
                                                     tile_names.push(name);
                                                 } else {
-                                                    let name = format!("tilemap_{}_{}", y, c);
+                                                    let name = format!("{}_{}_{}", varname, y, c);
                                                     if let Some(b) = tiles_sheet.bank {
                                                         print!("bank{b} ");
                                                     }
@@ -310,7 +464,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                             if let Some(name) = found {
                                                 tilesmap.push(name);
                                             } else {
-                                                let tilemap_name = format!("tilemap_{}_data", y);
+                                                let tilemap_name = format!("{}_{}_data", varname, y);
                                                 if let Some(b) = tiles_sheet.bank {
                                                     print!("bank{b} ");
                                                 }
@@ -324,7 +478,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                     if let Some(b) = tiles_sheet.bank {
                                         print!("bank{b} ");
                                     }
-                                    print!("const char tilemap_data_ptrs_high[{}] = {{", height);
+                                    print!("const char {varname}_data_ptrs_high[{}] = {{", height);
                                     for y in 0..height - 1 {
                                         print!("{} >> 8, ", &tilesmap[y]);
                                     }
@@ -332,7 +486,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                     if let Some(b) = tiles_sheet.bank {
                                         print!("bank{b} ");
                                     }
-                                    print!("const char tilemap_data_ptrs_low[{}] = {{", height);
+                                    print!("const char {varname}_data_ptrs_low[{}] = {{", height);
                                     for y in 0..height - 1 {
                                         print!("{} & 0xff, ", &tilesmap[y]);
                                     }
@@ -340,13 +494,13 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                     if let Some(b) = tiles_sheet.bank {
                                         print!("bank{b} ");
                                     }
-                                    println!("const char *tilemap_data_ptrs[2] = {{tilemap_data_ptrs_high, tilemap_data_ptrs_low}};\n");
+                                    println!("const char *{varname}_data_ptrs[2] = {{{varname}_data_ptrs_high, {varname}_data_ptrs_low}};\n");
                                     println!("/*\n#define TILING_HEIGHT {}", height);
                                     println!("#define TILING_WIDTH {}", width);
                                     println!("#include \"sparse_tiling.h\"\n*/\n");
 
                                 } else {
-                                    print!("const char tilemap[{}] = {{", 
+                                    print!("const char {varname}[{}] = {{", 
                                         if args.boundaries {
                                             (width + 1) * height + 1
                                         } else {
