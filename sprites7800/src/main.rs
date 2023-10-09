@@ -51,7 +51,9 @@ struct Sprite {
     #[serde(default)]
     mode: Option<String>,
     #[serde(default)]
-    alias: Option<String>
+    alias: Option<String>,
+    #[serde(default)]
+    background: Option<String>
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -168,8 +170,13 @@ fn main() -> Result<()> {
                                     }
                                 }
                                 if cx.is_none() {
-                                    println!("Unexpected color {:?} found at {},{}", color, sprite.left + x * pixel_width, sprite.top + y);
-                                    return Err(anyhow!("Sprite {} has more than {} colors", sprite.name, maxcolors));
+                                    if sprite.background.is_some() {
+                                        // If a background is specified
+                                        cx = Some(0); // This unknown color is affected to background
+                                    } else {
+                                        println!("Unexpected color {:?} found at {},{}", color, sprite.left + x * pixel_width, sprite.top + y);
+                                        return Err(anyhow!("Sprite {} has more than {} colors", sprite.name, maxcolors));
+                                    }
                                 }
                             }
                         }
