@@ -1,4 +1,9 @@
 palettes:
+  - name: fire
+    colors:
+    - [255, 0, 0] # Red
+    - [255, 143, 0] # Orange
+    - [255, 241, 0] # Yellow
   - name: sphinx 
     colors:
     - [113, 95, 26] # Drak Green
@@ -12,6 +17,30 @@ palettes:
 sprite_sheets:
   - image: bombjack_tiles.png
     sprites:
+      - name: platform
+        top: 0
+        left: 64
+        width: 48
+        height: 16
+        holeydma: false
+        palette: fire
+        palette_number: 3
+      - name: top_border 
+        top: 0
+        left: 112 
+        width: 48
+        height: 16
+        holeydma: false
+        palette: fire
+        palette_number: 3
+      - name: bottom_border 
+        top: 0
+        left: 160 
+        width: 32
+        height: 16
+        holeydma: false
+        palette: fire
+        palette_number: 3
       - name: sky 
         top: 0 
         left: 0
