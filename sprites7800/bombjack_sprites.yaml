@@ -14,28 +14,50 @@ palettes:
     - [64, 64, 64] # Dark grey
     - [128, 128, 128] # Medium grey
     - [192, 192, 192] # Light grey
-    - [0, 0, 128] # Blue
-    - [0, 0, 255] # Light blue
-    - [0, 255, 255] # Turquoise
-    - [0, 128, 0] # Dark green
-    - [0, 255, 0] # Light green
-    - [255, 255, 255] # White
+    - [64, 64, 255] # Blue
+    - [241, 194, 125] # Rose
+    - [0, 0, 0] # Black
     - [255, 0, 0] # Red
+    - [255, 241, 0] # Yellow
+    - [255, 255, 255] # White
+    - [255, 64, 64] # Red
     - [255, 143, 0] # Orange
     - [255, 241, 0] # Yellow
 sprite_sheets:
   - image: bombjack_sprites.png
     sprites:
-      - name: bomb
+      - name: bombjack_still
         top: 0
         left: 0
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_jumping
+        top: 16
+        left: 0
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_falling
+        top: 32 
+        left: 0
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bomb
+        top: 0
+        left: 48 
         height: 16 
         width: 16
         palette: bomb
       - name: border
         top: 0
-        left: 16
+        left: 64
         width: 8
         height: 16
         palette: fire
+        
 

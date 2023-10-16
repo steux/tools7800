@@ -1,3 +1,6 @@
+v0.3.4 (10/16/2023) :
+  - Accepts black as a color (not just background) 
+
 v0.3.3 (10/08/2023) :
   - Added background keyword support 
 

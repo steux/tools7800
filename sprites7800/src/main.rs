@@ -138,19 +138,8 @@ fn main() -> Result<()> {
                     for x in 0..sprite.width / pixel_width {
                         let color = img.get_pixel(sprite.left + x * pixel_width, sprite.top + y);
                         let mut cx: Option<u8> = None;
-                        if color[3] == 0 || (color[0] == 0 && color[1] == 0 && color[2] == 0) {
-                            cx = Some(0); // Background color (either black or transparent)
-                        } else {
-                            if mode == "320C" {
-                                // Check next pixel, should be background or same color
-                                let colorr = img.get_pixel(sprite.left + x * pixel_width + 1, sprite.top + y);
-                                if !(colorr[3] == 0 || (colorr[0] == 0 && colorr[1] == 0 && colorr[2] == 0)) {
-                                    // This is not background
-                                    if colorr != color {
-                                        return Err(anyhow!("Two consecutive pixels have a different color in 320C mode (x = {}, y = {})", x * 2, y));
-                                    }
-                                }
-                            }
+                        // In case of defined palette, priority is to find the color in the palette, so that black is not considered as a background color
+                        if color[3] != 0 && sprite.palette.is_some() { // Not transparent
                             for c in 0..maxcolors {
                                 if color[0] == colors[c].0 && color[1] == colors[c].1 && color[2] == colors[c].2 {
                                     // Ok. this is a pixel of color c
@@ -158,24 +147,40 @@ fn main() -> Result<()> {
                                     break;
                                 }
                             }
-                            if cx.is_none() {
-                                // Let's find a unaffected color
-                                for c in 0..maxcolors {
-                                    if colors[c].0 == 0 && colors[c].1 == 0 && colors[c].2 == 0 {
-                                        colors[c].0 = color[0];
-                                        colors[c].1 = color[1];
-                                        colors[c].2 = color[2];
-                                        cx = Some((c + 1) as u8);
-                                        break;
+                        }
+                        if cx.is_none() {
+                            if color[3] == 0 || (color[0] == 0 && color[1] == 0 && color[2] == 0) {
+                                cx = Some(0); // Background color (either black or transparent)
+                            } else {
+                                if mode == "320C" {
+                                    // Check next pixel, should be background or same color
+                                    let colorr = img.get_pixel(sprite.left + x * pixel_width + 1, sprite.top + y);
+                                    if !(colorr[3] == 0 || (colorr[0] == 0 && colorr[1] == 0 && colorr[2] == 0)) {
+                                        // This is not background
+                                        if colorr != color {
+                                            return Err(anyhow!("Two consecutive pixels have a different color in 320C mode (x = {}, y = {})", x * 2, y));
+                                        }
                                     }
                                 }
                                 if cx.is_none() {
-                                    if sprite.background.is_some() {
-                                        // If a background is specified
-                                        cx = Some(0); // This unknown color is affected to background
-                                    } else {
-                                        println!("Unexpected color {:?} found at {},{}", color, sprite.left + x * pixel_width, sprite.top + y);
-                                        return Err(anyhow!("Sprite {} has more than {} colors", sprite.name, maxcolors));
+                                    // Let's find a unaffected color
+                                    for c in 0..maxcolors {
+                                        if colors[c].0 == 0 && colors[c].1 == 0 && colors[c].2 == 0 {
+                                            colors[c].0 = color[0];
+                                            colors[c].1 = color[1];
+                                            colors[c].2 = color[2];
+                                            cx = Some((c + 1) as u8);
+                                            break;
+                                        }
+                                    }
+                                    if cx.is_none() {
+                                        if sprite.background.is_some() {
+                                            // If a background is specified
+                                            cx = Some(0); // This unknown color is affected to background
+                                        } else {
+                                            println!("Unexpected color {:?} found at {},{}", color, sprite.left + x * pixel_width, sprite.top + y);
+                                            return Err(anyhow!("Sprite {} has more than {} colors", sprite.name, maxcolors));
+                                        }
                                     }
                                 }
                             }
