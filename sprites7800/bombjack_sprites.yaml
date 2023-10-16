@@ -26,6 +26,18 @@ palettes:
 sprite_sheets:
   - image: bombjack_sprites.png
     sprites:
+      - name: bomb
+        top: 0
+        left: 48 
+        height: 16 
+        width: 16
+        palette: bomb
+      - name: border
+        top: 0
+        left: 64
+        width: 8
+        height: 16
+        palette: fire
       - name: bombjack_still
         top: 0
         left: 0
@@ -47,17 +59,118 @@ sprite_sheets:
         height: 16
         palette: all
         mode: 160B
-      - name: bomb
-        top: 0
-        left: 48 
-        height: 16 
-        width: 16
-        palette: bomb
-      - name: border
-        top: 0
-        left: 64
-        width: 8
+      - name: bombjack_falling_right
+        top: 48 
+        left: 0
+        width: 24
         height: 16
-        palette: fire
+        palette: all
+        mode: 160B
+      - name: bombjack_falling_left
+        top: 64 
+        left: 0
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_dancing_right
+        top: 80 
+        left: 0
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_dancing_left
+        top: 96 
+        left: 0
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_dead
+        top: 112 
+        left: 0
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_winning
+        top: 128
+        left: 0
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_jumping_left
+        top: 0
+        left: 24
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_jumping_right
+        top: 16
+        left: 24
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_still_right
+        top: 32 
+        left: 24
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_walking_right2
+        top: 48 
+        left: 24
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_walking_right1
+        top: 64 
+        left: 24
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_walking_right3
+        top: 80 
+        left: 24
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_still_left
+        top: 96 
+        left: 24
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_walking_left2
+        top: 112 
+        left: 24
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_walking_left1
+        top: 128
+        left: 24
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+      - name: bombjack_walking_left3
+        top: 144
+        left: 24
+        width: 24
+        height: 16
+        palette: all
+        mode: 160B
+        
         
 
