@@ -1,4 +1,9 @@
 palettes:
+  - name: enemies 
+    colors:
+    - [128, 128, 128] # Medium grey
+    - [192, 192, 192] # Light grey
+    - [255, 1, 1] # Red
   - name: fire
     colors:
     - [255, 0, 0] # Red
@@ -11,9 +16,9 @@ palettes:
     - [255, 255, 255] # White
   - name: all
     colors:
-    - [64, 64, 64] # Dark grey
     - [128, 128, 128] # Medium grey
     - [192, 192, 192] # Light grey
+    - [255, 1, 1] # Red
     - [64, 64, 255] # Blue
     - [241, 194, 125] # Rose
     - [0, 0, 0] # Black
@@ -32,6 +37,18 @@ sprite_sheets:
         height: 16 
         width: 16
         palette: bomb
+      - name: explosion
+        top: 16
+        left: 48
+        height: 16 
+        width: 16
+        palette: fire 
+      - name: sideone
+        top: 16
+        left: 64
+        height: 16
+        width: 64
+        palette: enemies
       - name: border
         top: 0
         left: 64
