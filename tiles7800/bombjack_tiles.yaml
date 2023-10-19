@@ -17,6 +17,13 @@ palettes:
 sprite_sheets:
   - image: bombjack_tiles.png
     sprites:
+      - name: digits
+        top: 224
+        left: 0
+        width: 160
+        height: 16
+        holeydma: false
+        palette: fire
       - name: platform
         top: 0
         left: 64
@@ -41,13 +48,6 @@ sprite_sheets:
         holeydma: false
         palette: fire
         palette_number: 3
-      - name: digits
-        top: 224
-        left: 0
-        width: 160
-        height: 16
-        holeydma: false
-        palette: fire
       - name: sky 
         top: 0 
         left: 0
