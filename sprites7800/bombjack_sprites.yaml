@@ -49,6 +49,12 @@ sprite_sheets:
         height: 16
         width: 64
         palette: enemies
+      - name: twohundred
+        top: 32
+        left: 48
+        height: 16
+        width: 24
+        palette: bomb
       - name: border
         top: 0
         left: 64
