@@ -47,6 +47,70 @@ sprite_sheets:
         holeydma: false
         palette: beige
         palette_number: 4
+      - name: rose_thing3_top
+        top: 192
+        left: 160
+        width: 16 
+        height: 16
+        holeydma: false
+        palette: rose 
+        palette_number: 6
+      - name: rose_thing4_top
+        top: 192
+        left: 176
+        width: 16 
+        height: 16
+        holeydma: false
+        palette: rose 
+        palette_number: 6
+      - name: rose_thing5_top
+        top: 208
+        left: 160
+        width: 32 
+        height: 16
+        holeydma: false
+        palette: rose 
+        palette_number: 6
+      - name: rose_thing6_top
+        top: 208
+        left: 192
+        width: 16 
+        height: 16
+        holeydma: false
+        palette: rose 
+        palette_number: 6
+      - name: rose_thing3_bottom
+        top: 240
+        left: 208 
+        width: 16 
+        height: 16
+        holeydma: false
+        palette: rose 
+        palette_number: 6
+      - name: rose_thing4_bottom
+        top: 240
+        left: 224
+        width: 16 
+        height: 16
+        holeydma: false
+        palette: rose 
+        palette_number: 6
+      - name: rose_thing5_bottom
+        top: 224
+        left: 208
+        width: 32 
+        height: 16
+        holeydma: false
+        palette: rose 
+        palette_number: 6
+      - name: rose_thing6_bottom
+        top: 224
+        left: 240
+        width: 16 
+        height: 16
+        holeydma: false
+        palette: rose 
+        palette_number: 6
       - name: brown_thing1_top
         top: 128 
         left: 0
@@ -189,70 +253,6 @@ sprite_sheets:
         holeydma: false
         palette: green 
         palette_number: 5
-      - name: rose_thing3_top
-        top: 192
-        left: 160
-        width: 16 
-        height: 16
-        holeydma: false
-        palette: rose 
-        palette_number: 6
-      - name: rose_thing4_top
-        top: 192
-        left: 176
-        width: 16 
-        height: 16
-        holeydma: false
-        palette: rose 
-        palette_number: 6
-      - name: rose_thing5_top
-        top: 208
-        left: 160
-        width: 32 
-        height: 16
-        holeydma: false
-        palette: rose 
-        palette_number: 6
-      - name: rose_thing6_top
-        top: 208
-        left: 192
-        width: 16 
-        height: 16
-        holeydma: false
-        palette: rose 
-        palette_number: 6
-      - name: rose_thing3_bottom
-        top: 240
-        left: 208 
-        width: 16 
-        height: 16
-        holeydma: false
-        palette: rose 
-        palette_number: 6
-      - name: rose_thing4_bottom
-        top: 240
-        left: 224
-        width: 16 
-        height: 16
-        holeydma: false
-        palette: rose 
-        palette_number: 6
-      - name: rose_thing5_bottom
-        top: 224
-        left: 208
-        width: 32 
-        height: 16
-        holeydma: false
-        palette: rose 
-        palette_number: 6
-      - name: rose_thing6_bottom
-        top: 224
-        left: 240
-        width: 16 
-        height: 16
-        holeydma: false
-        palette: rose 
-        palette_number: 6
       - name: swamp_rose1
         top: 224
         left: 160
