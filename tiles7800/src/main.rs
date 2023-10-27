@@ -148,7 +148,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                     // OK, we have the array, we have the tiles specs. Let's match them
                                     // Let's scan all the tiles to make sure all this makes sense
                                     if t.sprite_sheets.len() != 1 {
-                                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Only one sprite sheet (tiles) should be provided")));
+                                        eprintln!("Only the first sprite sheet (tiles) will be used");
                                     }
                                     let tiles_sheet = &t.sprite_sheets[0];
                                     let img = image::open(&tiles_sheet.image).expect(&format!("Can't open image {}", tiles_sheet.image));

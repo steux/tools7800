@@ -1,3 +1,6 @@
+v0.3.5 (10/27/2023) :
+  - Solved a bug with sprites defined without palette 
+
 v0.3.4 (10/16/2023) :
   - Accepts black as a color (not just background) 
 

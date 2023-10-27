@@ -285,7 +285,10 @@ sprite_sheets:
         holeydma: false
         palette: grey 
         palette_number: 7
-
-
-
-
+  - image: RType_background.png
+    sprites:
+      - name: background_level1
+        top: 0
+        left: 0
+        width: 192
+        height: 32
