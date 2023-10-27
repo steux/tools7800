@@ -94,7 +94,7 @@ fn main() -> Result <(), Box<dyn error::Error>>
     let args = Args::parse();
     let xml = fs::read_to_string(args.filename).expect("Unable to read input file");
     let varname = args.varname.unwrap_or("tilemap".into());
-    let tileset_maxsize = args.maxsize.unwrap_or(256 as usize);
+    let tileset_maxsize = args.maxsize.unwrap_or(31 as usize);
     
     let dom = xml_dom::parser::read_xml(&xml)?;
     let root = dom.first_child().unwrap();

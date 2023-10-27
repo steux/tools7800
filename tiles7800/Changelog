@@ -1,3 +1,6 @@
+v0.3.3 (10/27/2023) :
+	- Added limit of 31 to tileset size 
+
 v0.3.2 (10/09/2023) :
 	- Added background keyword support
 	- Changed generated table name
