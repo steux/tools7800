@@ -23,6 +23,12 @@ palettes:
 sprite_sheets:
   - image: RType_tiles.png
     sprites:
+      - name: digits
+        top: 80
+        left: 0
+        width: 160
+        height: 16
+        holeydma: false
       - name: brown_tiles1 
         top: 0
         left: 0
@@ -180,16 +186,16 @@ sprite_sheets:
         palette_number: 4
       - name: brown_thing1_bottom
         top: 240 
-        left: 0
-        width: 176
+        left: 64 
+        width: 112
         height: 16
         holeydma: false
         palette: beige
         palette_number: 4
       - name: brown_thing2_bottom
         top: 224 
-        left: 0
-        width: 160
+        left: 64
+        width: 96
         height: 16
         holeydma: false
         palette: beige
