@@ -1,0 +1,13 @@
+sprite_sheets:
+  - image: RType_font.png
+    mode: 320A
+    holeydma: 8
+    sprites:
+      - name: alphabet
+        top: 0
+        left: 0
+        width: 144
+        height: 32
+        holeydma: true 
+
+
