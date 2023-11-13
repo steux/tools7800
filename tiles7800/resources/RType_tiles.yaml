@@ -9,13 +9,27 @@ palettes:
     - [140, 60, 59] # Dark Rose
     - [207, 124, 122] # Rose
     - [227, 194, 193] # Light rose
-  - name: green 
+  - name: blue 
     colors: 
-    - [24, 86, 51] # Dark green
-    - [49, 106, 70] # Green
-    - [76, 129, 92] # Light green
+    - [41, 77, 212] # Dark blue
+    - [102, 131, 255] # Blue
+    - [142, 230, 250] # Light blue
   - name: grey
     colors:
+    - [64, 64, 64] # Dark grey 
+    - [128, 128, 128] # Grey
+    - [192, 192, 192] # Light grey
+  - name: all
+    colors:
+    - [101, 82, 55] # Brown
+    - [147, 129, 101] # Light brown
+    - [194, 183, 153] # Beige
+    - [140, 60, 59] # Dark Rose
+    - [207, 124, 122] # Rose
+    - [227, 194, 193] # Light rose
+    - [41, 77, 212] # Dark blue
+    - [102, 131, 255] # Blue
+    - [142, 230, 250] # Light blue
     - [64, 64, 64] # Dark grey 
     - [128, 128, 128] # Grey
     - [192, 192, 192] # Light grey
@@ -23,12 +37,15 @@ palettes:
 sprite_sheets:
   - image: RType_tiles.png
     sprites:
-      - name: digits
-        top: 80
-        left: 0
-        width: 160
-        height: 16
-        holeydma: false
+      - name: R9
+        top: 0
+        left: 192
+        width: 32
+        holeydma: true
+        mode: 160B
+        palette: all
+  - image: RType_tiles.png
+    sprites:
       - name: brown_tiles1 
         top: 0
         left: 0
@@ -257,7 +274,7 @@ sprite_sheets:
         width: 16 
         height: 16
         holeydma: false
-        palette: green 
+        palette: blue 
         palette_number: 5
       - name: swamp_rose1
         top: 224
