@@ -1,4 +1,9 @@
 palettes:
+  - name: fire
+    colors:
+    - [255, 0, 0] # Red
+    - [255, 143, 0] # Orange
+    - [255, 241, 0] # Yellow
   - name: beige 
     colors:
     - [101, 82, 55] # Brown
@@ -44,3 +49,10 @@ sprite_sheets:
         holeydma: true
         mode: 160B
         palette: all
+      - name: missile
+        top: 0
+        left: 32
+        width: 16
+        holeydma: true
+        palette: fire
+
