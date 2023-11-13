@@ -4,46 +4,23 @@ palettes:
     - [101, 82, 55] # Brown
     - [147, 129, 101] # Light brown
     - [194, 183, 153] # Beige
-  - name: rose
-    colors:
-    - [140, 60, 59] # Dark Rose
-    - [207, 124, 122] # Rose
-    - [227, 194, 193] # Light rose
   - name: blue 
     colors: 
     - [41, 77, 212] # Dark blue
     - [102, 131, 255] # Blue
     - [142, 230, 250] # Light blue
+  - name: rose
+    colors:
+    - [140, 60, 59] # Dark Rose
+    - [207, 124, 122] # Rose
+    - [227, 194, 193] # Light rose
   - name: grey
     colors:
     - [64, 64, 64] # Dark grey 
     - [128, 128, 128] # Grey
     - [192, 192, 192] # Light grey
-  - name: all
-    colors:
-    - [101, 82, 55] # Brown
-    - [147, 129, 101] # Light brown
-    - [194, 183, 153] # Beige
-    - [140, 60, 59] # Dark Rose
-    - [207, 124, 122] # Rose
-    - [227, 194, 193] # Light rose
-    - [41, 77, 212] # Dark blue
-    - [102, 131, 255] # Blue
-    - [142, 230, 250] # Light blue
-    - [64, 64, 64] # Dark grey 
-    - [128, 128, 128] # Grey
-    - [192, 192, 192] # Light grey
 
 sprite_sheets:
-  - image: RType_tiles.png
-    sprites:
-      - name: R9
-        top: 0
-        left: 192
-        width: 32
-        holeydma: true
-        mode: 160B
-        palette: all
   - image: RType_tiles.png
     sprites:
       - name: brown_tiles1 
