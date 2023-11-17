@@ -50,6 +50,13 @@ struct Palette {
     colors: Vec<(u8, u8, u8)>
 }
 
+#[derive(Deserialize)]
+enum Mirror {
+    Vertical,
+    Horizontal,
+    Both
+}
+
 #[allow(unused)]
 #[derive(Deserialize)]
 struct Sprite {
@@ -69,6 +76,8 @@ struct Sprite {
     palette_number: Option<u8>,
     #[serde(default)]
     alias: Option<String>,
+    #[serde(default)]
+    mirror: Option<Mirror>,
     #[serde(default)]
     background: Option<String>
 }
@@ -180,7 +189,11 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                         let background = if let Some(b) = &tile.background { aliases.get(b.as_str()).copied() } else { None };
                                         let mut idx = if let Some(alias) = &tile.alias {
                                             if let Some(i) = aliases.get(alias.as_str()) {
-                                                *i
+                                                if let Some(Mirror::Vertical) = tile.mirror {
+                                                    *i + 1 // Add 1 for vertical mirroring
+                                                } else {
+                                                    *i
+                                                }
                                             } else {
                                                 return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Bad alias")));
                                             }
