@@ -22,6 +22,7 @@ palettes:
 
 sprite_sheets:
   - image: RType_tiles.png
+    bank: 1
     sprites:
       - name: brown_tiles1 
         top: 0
