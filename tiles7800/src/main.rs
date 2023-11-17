@@ -40,6 +40,8 @@ struct SpriteSheet {
     #[serde(default = "default_mode")]
     mode: String,
     bank: Option<u8>,
+    #[serde(default)]
+    mirror: Option<Mirror>,
     sprites: Vec<Sprite>
 }
 
@@ -182,14 +184,19 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                         let y = tile.top / tileheight;
                                         let x = tile.left / tilewidth;
                                         let ix = 1 + x + y * image_width / tilewidth;
+                                        let ixx = 1 + x + (img.height() / tileheight - 1 - y) * image_width / tilewidth;
                                         refs.insert(index, ix);
+                                        refs.insert(index + 1, ixx);
                                         let nbtilesx = tile.width / tilewidth;
                                         let nbtilesy = tile.height / tileheight;
                                         let palette_number = if let Some(p) = tile.palette_number { p } else { 0 }; 
-                                        let background = if let Some(b) = &tile.background { aliases.get(b.as_str()).copied() } else { None };
+                                        let mut background = if let Some(b) = &tile.background { aliases.get(b.as_str()).copied() } else { None };
                                         let mut idx = if let Some(alias) = &tile.alias {
                                             if let Some(i) = aliases.get(alias.as_str()) {
                                                 if let Some(Mirror::Vertical) = tile.mirror {
+                                                    if let Some(b) = background { // Background is also reversed
+                                                        background = Some(b + 1);
+                                                    }
                                                     *i + 1 // Add 1 for vertical mirroring
                                                 } else {
                                                     *i
@@ -203,6 +210,12 @@ fn main() -> Result <(), Box<dyn error::Error>>
                                                 tiles.insert(ix + i + j * image_width / tilewidth, Tile {
                                                     index: idx, mode, palette_number, background
                                                 });
+                                                if let Some(Mirror::Vertical) = tiles_sheet.mirror {
+                                                    let bg = if let Some(b) = background { Some(b + 1) } else { None };
+                                                    tiles.insert(ixx + i - j * image_width / tilewidth, Tile {
+                                                        index: idx + 1, mode, palette_number, background: bg
+                                                    });
+                                                }
                                                 index += tile_bytes;
                                                 idx += tile_bytes;
                                             }

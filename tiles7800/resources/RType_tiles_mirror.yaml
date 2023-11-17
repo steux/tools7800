@@ -23,6 +23,7 @@ palettes:
 sprite_sheets:
   - image: RType_tiles_mirror.png
     bank: 1
+    mirror: !Vertical
     sprites:
       - name: brown_tiles1 
         top: 0
@@ -179,16 +180,6 @@ sprite_sheets:
         holeydma: false
         palette: grey 
         palette_number: 7
-      - name: grey_targets_mirror 
-        top: 160 
-        left: 0 
-        width: 48
-        height: 16
-        holeydma: false
-        alias: grey_targets
-        mirror: !Vertical 
-        palette: grey 
-        palette_number: 7
   - image: RType_background.png
     bank: 1
     sprites:
@@ -197,4 +188,3 @@ sprite_sheets:
         left: 0
         width: 192
         height: 32
-        holeydma: false
