@@ -1,5 +1,6 @@
 v0.3.3 (10/27/2023) :
 	- Added limit of 31 to tileset size 
+	- Added mirror option for sprites (only vertical at the moment)
 
 v0.3.2 (10/09/2023) :
 	- Added background keyword support
