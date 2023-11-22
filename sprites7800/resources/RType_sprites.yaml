@@ -1,24 +1,14 @@
 palettes:
   - name: fire
     colors:
-    - [255, 0, 0] # Red
     - [255, 143, 0] # Orange
     - [255, 241, 0] # Yellow
-  - name: beige 
+    - [255, 255, 255] # White
+  - name: blue_red 
     colors:
-    - [101, 82, 55] # Brown
-    - [147, 129, 101] # Light brown
-    - [194, 183, 153] # Beige
-  - name: blue 
-    colors: 
     - [41, 77, 212] # Dark blue
+    - [255, 0, 0] # Red
     - [102, 131, 255] # Blue
-    - [142, 230, 250] # Light blue
-  - name: rose
-    colors:
-    - [140, 60, 59] # Dark Rose
-    - [207, 124, 122] # Rose
-    - [227, 194, 193] # Light rose
   - name: grey
     colors:
     - [64, 64, 64] # Dark grey 
@@ -26,18 +16,18 @@ palettes:
     - [192, 192, 192] # Light grey
   - name: all
     colors:
-    - [101, 82, 55] # Brown
-    - [147, 129, 101] # Light brown
-    - [194, 183, 153] # Beige
+    - [255, 143, 0] # Orange
+    - [255, 241, 0] # Yellow
+    - [255, 255, 255] # White
     - [41, 77, 212] # Dark blue
+    - [255, 0, 0] # Red
     - [102, 131, 255] # Blue
-    - [142, 230, 250] # Light blue
-    - [140, 60, 59] # Dark Rose
-    - [207, 124, 122] # Rose
-    - [227, 194, 193] # Light rose
     - [64, 64, 64] # Dark grey 
     - [128, 128, 128] # Grey
     - [192, 192, 192] # Light grey
+    - [0, 26, 0] # Dark green
+    - [0, 50, 0] # Green
+    - [0, 72, 0] # Light green
 
 sprite_sheets:
   - image: RType_sprites.png
@@ -52,7 +42,26 @@ sprite_sheets:
       - name: missile
         top: 0
         left: 32
-        width: 16
+        width: 16 
         holeydma: true
         palette: fire
+      - name: big_circle_top
+        top: 16 
+        left: 0
+        width: 48
+        holeydma: true
+        palette: blue_red
+      - name: big_circle_bottom
+        top: 48 
+        left: 0
+        width: 48
+        holeydma: true
+        palette: blue_red
+      - name: small_circles 
+        top: 24
+        left: 40
+        width: 120
+        height: 32 
+        holeydma: true
+        palette: blue_red
 
