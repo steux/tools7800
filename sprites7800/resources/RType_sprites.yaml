@@ -57,11 +57,46 @@ sprite_sheets:
         width: 48
         holeydma: true
         palette: blue_red
-      - name: small_circles 
+      - name: circles_top 
         top: 24
         left: 40
         width: 120
-        height: 32 
         holeydma: true
         palette: blue_red
+      - name: circles_bottom 
+        top: 40 
+        left: 40
+        width: 120
+        holeydma: true
+        palette: blue_red
+      - name: satellite1
+        top: 0
+        left: 48
+        width: 16
+        mode: 160B
+        holeydma: true
+        palette: all
+      - name: satellite2
+        top: 0
+        left: 64 
+        width: 16
+        holeydma: true
+        mode: 160B
+        palette: all
+      - name: satellite3
+        top: 0
+        left: 80 
+        width: 16
+        holeydma: true
+        mode: 160B
+        palette: all
+      - name: satellite4
+        top: 0
+        left: 96 
+        width: 16
+        holeydma: true
+        mode: 160B
+        palette: all
+
+
 
