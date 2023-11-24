@@ -1,7 +1,9 @@
+use std::fs;
 use clap::Parser;
+use binrw::{BinRead, BinReaderExt};
 
-#[repr(C, packed)]
-struct Rmtheader {
+#[derive(BinRead, Debug)]
+struct RmtHeader {
     vect1: u16,
     vect2_start: u16,
     vect3: u16,
@@ -17,7 +19,7 @@ struct Rmtheader {
     pointer_to_song: u16,
 }
 
-#[repr(C, packed)]
+#[derive(BinRead)]
 struct Upoint {
     pointer: u16
 }
@@ -26,13 +28,24 @@ struct Upoint {
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// RMT or SAP file 
-    #[arg(short, long)]
     input: String,
-
-    #[arg(short, long, default_value = "rmt.c")]
-    output: String,
 }
 
-fn main() {
+fn main() -> std::io::Result<()>
+{
     let args = Args::parse();
+    let buffer = fs::read(args.input)?;
+   
+    let mut found = None;
+    let magic = &vec!['R' as u8, 'M' as u8, 'T' as u8, '4' as u8];
+    for (i, w) in buffer.windows(4).enumerate() {
+        if w == magic {
+            found = Some(i);
+        }
+    }
+    let mut cursor = std::io::Cursor::new(buffer);
+    cursor.set_position((found.unwrap() - 6) as u64); 
+    let header: RmtHeader = cursor.read_le().unwrap();
+    println!("Header: {:?}", header);
+    Ok(())
 }
