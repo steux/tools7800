@@ -24,14 +24,14 @@ sprite_sheets:
       - name: dob1 
         top: 0
         left: 0
-        width: 148
+        width: 128 # 148
         holeydma: true
         mode: 160B
         palette: all
       - name: dob2 
         top: 16 
         left: 0
-        width: 144
+        width: 128 # 144
         holeydma: true
         mode: 160B
         palette: all
@@ -45,7 +45,7 @@ sprite_sheets:
       - name: dob4 
         top: 48 
         left: 12
-        width: 136
+        width: 128 # 136
         holeydma: true
         mode: 160B
         palette: all
@@ -94,7 +94,7 @@ sprite_sheets:
       - name: dob11 
         top: 160
         left: 0 
-        width: 148
+        width: 112 # 148
         holeydma: true
         mode: 160B
         palette: all
@@ -126,8 +126,3 @@ sprite_sheets:
         holeydma: true
         mode: 160B
         palette: all
-
-
-
-
-
