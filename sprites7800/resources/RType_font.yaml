@@ -23,8 +23,8 @@ sprite_sheets:
         holeydma: false 
       - name: beam_meter_in 
         top: 32 
-        left: 8
-        width: 128
+        left: 0
+        width: 136
         height: 8 
         holeydma: false 
 
