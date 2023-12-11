@@ -1,3 +1,6 @@
+v0.3.6 (12/11/2023) :
+   - Corrected bug wrt 320C sprites
+
 v0.3.5 (10/27/2023) :
   - Solved a bug with sprites defined without palette 
 

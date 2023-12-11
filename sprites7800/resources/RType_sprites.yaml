@@ -182,12 +182,26 @@ sprite_sheets:
         left: 32
         width: 16
         palette: fire
-
-
-
-
-
-
-
-
-
+      - name: patapata1
+        top: 128
+        left: 48
+        width: 16
+        palette: blue_red
+      - name: patapata2
+        top: 128
+        left: 64 
+        width: 16
+        palette: blue_red
+      - name: patapata3
+        top: 128
+        left: 80
+        width: 16
+        palette: blue_red
+      - name: bullet1
+        top: 128
+        left: 96
+        width: 8
+        palette: fire
+    collisions:
+      - sprite1: bullet1
+        sprite2: R9

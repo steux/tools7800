@@ -154,13 +154,15 @@ fn main() -> Result<()> {
                             } else {
                                 if mode == "320C" {
                                     // Check next pixel, should be background or same color
-                                    let colorr = img.get_pixel(sprite.left + x * pixel_width + 1, sprite.top + y);
-                                    if !(colorr[3] == 0 || (colorr[0] == 0 && colorr[1] == 0 && colorr[2] == 0)) {
-                                        // This is not background
-                                        if colorr != color {
-                                            return Err(anyhow!("Two consecutive pixels have a different color in 320C mode (x = {}, y = {})", x * 2, y));
+                                    if x & 1 == 0 {
+                                        let colorr = img.get_pixel(sprite.left + x * pixel_width + 1, sprite.top + y);
+                                        if !(colorr[3] == 0 || (colorr[0] == 0 && colorr[1] == 0 && colorr[2] == 0)) {
+                                            // This is not background
+                                            if colorr != color {
+                                                return Err(anyhow!("Two consecutive pixels have a different color in 320C mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", x * 2, y, color, colorr));
+                                            }
                                         }
-                                    }
+                                    } 
                                 }
                                 if cx.is_none() {
                                     // Let's find a unaffected color
