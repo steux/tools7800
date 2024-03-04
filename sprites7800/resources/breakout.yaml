@@ -1,0 +1,51 @@
+palettes:
+  - name: ball_suitcase
+    colors:
+      - [156, 32, 32] # Red brick
+      - [112, 40, 0] # Red brick. Dark
+      - [252, 252, 104] # Yellow
+      - [236, 236, 236] # White
+sprite_sheets:
+  - image: breakout.png
+    holeydma: 8
+    sprites:
+      - name: suitcase_even
+        left: 0
+        top: 0
+        height: 8
+        width: 24
+        palette: ball_suitcase
+        mode: 320C
+      - name: suitecase_odd
+        left: 1
+        top: 0
+        height: 8
+        width: 24
+        palette: ball_suitcase
+        mode: 320C
+      - name: ball_even
+        left: 16
+        top: 8
+        height: 8
+        width: 8
+        palette: ball_suitcase
+        mode: 320C
+      - name: ball_odd
+        left: 16
+        top: 16
+        height: 8
+        width: 8
+        palette: ball_suitcase
+        mode: 320C
+      - name: brick
+        left: 0
+        top: 8
+        height: 8
+        width: 16
+        mode: 320A
+      - name: side_brick
+        left: 0
+        top: 16
+        height: 8
+        width: 8
+        mode: 320A
