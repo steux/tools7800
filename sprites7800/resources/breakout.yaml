@@ -16,7 +16,7 @@ sprite_sheets:
         width: 24
         palette: ball_suitcase
         mode: 320C
-      - name: suitecase_odd
+      - name: suitcase_odd
         left: 1
         top: 0
         height: 8
