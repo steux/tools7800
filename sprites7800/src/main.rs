@@ -145,7 +145,9 @@ fn main() -> Result<()> {
                     let mut current_byte: u8 = 0;
                     let mut current_bits: u8 = 0;
                     for x in 0..sprite.width / pixel_width {
-                        let color = img.get_pixel(sprite.left + x * pixel_width, sprite.top + y);
+                        let xp = sprite.left + x * pixel_width;
+                        let yp = sprite.top + y;
+                        let color = img.get_pixel(xp, yp);
                         let mut cx: Option<u8> = None;
                         // In case of defined palette, priority is to find the color in the palette, so that black is not considered as a background color
                         if (color[3] != 0 && sprite.palette.is_some())
