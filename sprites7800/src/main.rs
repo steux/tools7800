@@ -162,6 +162,26 @@ fn main() -> Result<()> {
                                 {
                                     // Ok. this is a pixel of color c
                                     cx = Some((c + 1) as u8);
+                                    // 320C mode contraint check
+                                    if mode == "320C" {
+                                        // Check next pixel, should be background or same color
+                                        if x & 1 == 0 {
+                                            let colorr = img.get_pixel(
+                                                sprite.left + x * pixel_width + 1,
+                                                sprite.top + y,
+                                            );
+                                            if !(colorr[3] == 0
+                                                || (colorr[0] == 0
+                                                    && colorr[1] == 0
+                                                    && colorr[2] == 0))
+                                            {
+                                                // This is not background
+                                                if colorr != color {
+                                                    return Err(anyhow!("Sprite {}: Two consecutive pixels have a different color in 320C mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", sprite.name, x, y, color, colorr));
+                                                }
+                                            }
+                                        }
+                                    }
                                     break;
                                 }
                             }
@@ -170,53 +190,52 @@ fn main() -> Result<()> {
                             if color[3] == 0 || (color[0] == 0 && color[1] == 0 && color[2] == 0) {
                                 cx = Some(0); // Background color (either black or transparent)
                             } else {
-                                if mode == "320C" {
-                                    // Check next pixel, should be background or same color
-                                    if x & 1 == 0 {
-                                        let colorr = img.get_pixel(
-                                            sprite.left + x * pixel_width + 1,
-                                            sprite.top + y,
-                                        );
-                                        if !(colorr[3] == 0
-                                            || (colorr[0] == 0 && colorr[1] == 0 && colorr[2] == 0))
-                                        {
-                                            // This is not background
-                                            if colorr != color {
-                                                return Err(anyhow!("Two consecutive pixels have a different color in 320C mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", x, y, color, colorr));
+                                // Let's find a unaffected color
+                                for c in 0..maxcolors {
+                                    if colors[c].0 == 0 && colors[c].1 == 0 && colors[c].2 == 0 {
+                                        colors[c].0 = color[0];
+                                        colors[c].1 = color[1];
+                                        colors[c].2 = color[2];
+                                        cx = Some((c + 1) as u8);
+                                        //println!("color {c} affected to {:?}", color);
+                                        if mode == "320C" {
+                                            // Check next pixel, should be background or same color
+                                            if x & 1 == 0 {
+                                                let colorr = img.get_pixel(
+                                                    sprite.left + x * pixel_width + 1,
+                                                    sprite.top + y,
+                                                );
+                                                if !(colorr[3] == 0
+                                                    || (colorr[0] == 0
+                                                        && colorr[1] == 0
+                                                        && colorr[2] == 0))
+                                                {
+                                                    // This is not background
+                                                    if colorr != color {
+                                                        return Err(anyhow!("Sprite {}: Two consecutive pixels have a different color in 320C mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", sprite.name, x, y, color, colorr));
+                                                    }
+                                                }
                                             }
                                         }
+                                        break;
                                     }
                                 }
                                 if cx.is_none() {
-                                    // Let's find a unaffected color
-                                    for c in 0..maxcolors {
-                                        if colors[c].0 == 0 && colors[c].1 == 0 && colors[c].2 == 0
-                                        {
-                                            colors[c].0 = color[0];
-                                            colors[c].1 = color[1];
-                                            colors[c].2 = color[2];
-                                            cx = Some((c + 1) as u8);
-                                            //println!("color {c} affected to {:?}", color);
-                                            break;
-                                        }
-                                    }
-                                    if cx.is_none() {
-                                        if sprite.background.is_some() {
-                                            // If a background is specified
-                                            cx = Some(0); // This unknown color is affected to background
-                                        } else {
-                                            println!(
-                                                "Unexpected color {:?} found at {},{}",
-                                                color,
-                                                sprite.left + x * pixel_width,
-                                                sprite.top + y
-                                            );
-                                            return Err(anyhow!(
-                                                "Sprite {} has more than {} colors",
-                                                sprite.name,
-                                                maxcolors
-                                            ));
-                                        }
+                                    if sprite.background.is_some() {
+                                        // If a background is specified
+                                        cx = Some(0); // This unknown color is affected to background
+                                    } else {
+                                        println!(
+                                            "Unexpected color {:?} found at {},{}",
+                                            color,
+                                            sprite.left + x * pixel_width,
+                                            sprite.top + y
+                                        );
+                                        return Err(anyhow!(
+                                            "Sprite {} has more than {} colors",
+                                            sprite.name,
+                                            maxcolors
+                                        ));
                                     }
                                 }
                             }
