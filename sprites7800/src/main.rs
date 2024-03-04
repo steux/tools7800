@@ -1,15 +1,15 @@
-use std::fs;
-use serde::Deserialize;
+use anyhow::{anyhow, Result};
 use clap::Parser;
 use image::GenericImageView;
-use anyhow::{anyhow, Result};
+use serde::Deserialize;
+use std::fs;
 
 /// Atari 7800 tool that generates C code for sprites described in a YAML file
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// YAML input file
-    filename: String
+    filename: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -27,13 +27,13 @@ struct SpriteSheet {
     holeydma: Option<u8>,
     bank: Option<u8>,
     sprites: Vec<Sprite>,
-    collisions: Option<Vec<Collision>>
+    collisions: Option<Vec<Collision>>,
 }
 
 #[derive(Debug, Deserialize)]
 struct Palette {
     name: String,
-    colors: Vec<(u8, u8, u8)>
+    colors: Vec<(u8, u8, u8)>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,18 +53,24 @@ struct Sprite {
     #[serde(default)]
     alias: Option<String>,
     #[serde(default)]
-    background: Option<String>
+    background: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 struct Collision {
     sprite1: String,
-    sprite2: String
+    sprite2: String,
 }
 
-fn default_sprite_size() -> u32 { 16 }
-fn default_holeydma() -> bool { true }
-fn default_mode() -> String { "160A".to_string() }
+fn default_sprite_size() -> u32 {
+    16
+}
+fn default_holeydma() -> bool {
+    true
+}
+fn default_mode() -> String {
+    "160A".to_string()
+}
 
 // Color tables:
 //
@@ -77,9 +83,9 @@ fn default_mode() -> String { "160A".to_string() }
 // |      | P2 = 1 => P4C1, P4C2, P4C3
 // | 320C | P2 = 0 => P0C2, P1C2, P2C2, P3C2
 // |      | P2 = 1 => P4C2, P5C2, P6C2, P7C2
-// | 320D | P2 = X, P1 = 0, P0 = 0 => PXC2 
+// | 320D | P2 = X, P1 = 0, P0 = 0 => PXC2
 // |      | P2 = X, P1 = 0, P0 = 1 => PXC1, PXC2, PXC3 with BG on the left
-// |      | P2 = X, P1 = 1, P0 = 0 => PXC1, PXC2, PXC3 with BG on the right 
+// |      | P2 = X, P1 = 1, P0 = 0 => PXC1, PXC2, PXC3 with BG on the right
 // |      | P2 = X, P1 = 1, P0 = 1 => PXC1, PXC3
 
 fn main() -> Result<()> {
@@ -87,14 +93,17 @@ fn main() -> Result<()> {
     let contents = fs::read_to_string(args.filename).expect("Unable to read input file");
     let all_sprites: AllSprites = serde_yaml::from_str(&contents)?;
     for sprite_sheet in all_sprites.sprite_sheets {
-        let img = image::open(&sprite_sheet.image).expect(&format!("Can't open image {}", sprite_sheet.image));
+        let img = image::open(&sprite_sheet.image)
+            .expect(&format!("Can't open image {}", sprite_sheet.image));
 
         // Generate sprites data
         for sprite in &sprite_sheet.sprites {
             if sprite.alias.is_none() {
-                let mode = if let Some(s) = &sprite.mode { s.as_str() } else {
+                let mode = if let Some(s) = &sprite.mode {
+                    s.as_str()
+                } else {
                     sprite_sheet.mode.as_str()
-                }; 
+                };
 
                 let pixel_width = match mode {
                     "320A" | "320B" | "320C" | "320D" => 1,
@@ -112,15 +121,15 @@ fn main() -> Result<()> {
                     "320B" => 3,
                     "320C" => 4,
                     "320D" => 1,
-                    _ => return Err(anyhow!("Unknown gfx {} mode", mode))
+                    _ => return Err(anyhow!("Unknown gfx {} mode", mode)),
                 };
 
-                let mut colors = [(0u8, 0u8, 0u8);12];
+                let mut colors = [(0u8, 0u8, 0u8); 12];
                 if maxcolors != 1 {
                     if let Some(palettes) = &all_sprites.palettes {
                         if let Some(pname) = &sprite.palette {
                             let px = palettes.into_iter().find(|x| &x.name == pname);
-                            if let Some(p) = px { 
+                            if let Some(p) = px {
                                 let mut i = 0;
                                 for c in &p.colors {
                                     colors[i] = *c;
@@ -139,9 +148,16 @@ fn main() -> Result<()> {
                         let color = img.get_pixel(sprite.left + x * pixel_width, sprite.top + y);
                         let mut cx: Option<u8> = None;
                         // In case of defined palette, priority is to find the color in the palette, so that black is not considered as a background color
-                        if (color[3] != 0 && sprite.palette.is_some()) || (sprite.palette.is_none() && (color[0] != 0 || color[1] != 0 || color[2] != 0)) { // Not transparent
+                        if (color[3] != 0 && sprite.palette.is_some())
+                            || (sprite.palette.is_none()
+                                && (color[0] != 0 || color[1] != 0 || color[2] != 0))
+                        {
+                            // Not transparent
                             for c in 0..maxcolors {
-                                if color[0] == colors[c].0 && color[1] == colors[c].1 && color[2] == colors[c].2 {
+                                if color[0] == colors[c].0
+                                    && color[1] == colors[c].1
+                                    && color[2] == colors[c].2
+                                {
                                     // Ok. this is a pixel of color c
                                     cx = Some((c + 1) as u8);
                                     break;
@@ -155,19 +171,25 @@ fn main() -> Result<()> {
                                 if mode == "320C" {
                                     // Check next pixel, should be background or same color
                                     if x & 1 == 0 {
-                                        let colorr = img.get_pixel(sprite.left + x * pixel_width + 1, sprite.top + y);
-                                        if !(colorr[3] == 0 || (colorr[0] == 0 && colorr[1] == 0 && colorr[2] == 0)) {
+                                        let colorr = img.get_pixel(
+                                            sprite.left + x * pixel_width + 1,
+                                            sprite.top + y,
+                                        );
+                                        if !(colorr[3] == 0
+                                            || (colorr[0] == 0 && colorr[1] == 0 && colorr[2] == 0))
+                                        {
                                             // This is not background
                                             if colorr != color {
-                                                return Err(anyhow!("Two consecutive pixels have a different color in 320C mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", x * 2, y, color, colorr));
+                                                return Err(anyhow!("Two consecutive pixels have a different color in 320C mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", x, y, color, colorr));
                                             }
                                         }
-                                    } 
+                                    }
                                 }
                                 if cx.is_none() {
                                     // Let's find a unaffected color
                                     for c in 0..maxcolors {
-                                        if colors[c].0 == 0 && colors[c].1 == 0 && colors[c].2 == 0 {
+                                        if colors[c].0 == 0 && colors[c].1 == 0 && colors[c].2 == 0
+                                        {
                                             colors[c].0 = color[0];
                                             colors[c].1 = color[1];
                                             colors[c].2 = color[2];
@@ -181,8 +203,17 @@ fn main() -> Result<()> {
                                             // If a background is specified
                                             cx = Some(0); // This unknown color is affected to background
                                         } else {
-                                            println!("Unexpected color {:?} found at {},{}", color, sprite.left + x * pixel_width, sprite.top + y);
-                                            return Err(anyhow!("Sprite {} has more than {} colors", sprite.name, maxcolors));
+                                            println!(
+                                                "Unexpected color {:?} found at {},{}",
+                                                color,
+                                                sprite.left + x * pixel_width,
+                                                sprite.top + y
+                                            );
+                                            return Err(anyhow!(
+                                                "Sprite {} has more than {} colors",
+                                                sprite.name,
+                                                maxcolors
+                                            ));
                                         }
                                     }
                                 }
@@ -199,7 +230,7 @@ fn main() -> Result<()> {
                                 } else {
                                     current_byte <<= pixel_bits;
                                 };
-                            },
+                            }
                             "160B" => {
                                 let c = match cx.unwrap() {
                                     0 => 0,
@@ -215,12 +246,12 @@ fn main() -> Result<()> {
                                     10 => 13,
                                     11 => 14,
                                     12 => 15,
-                                    _ => 0
+                                    _ => 0,
                                 };
-                                current_byte |= (if c & 1 != 0 { 16 } else { 0 }) |
-                                    (if c & 2 != 0 { 32 } else { 0 }) |
-                                    (if c & 4 != 0 { 1 } else { 0 }) |
-                                    (if c & 8 != 0 { 2 } else { 0 });
+                                current_byte |= (if c & 1 != 0 { 16 } else { 0 })
+                                    | (if c & 2 != 0 { 32 } else { 0 })
+                                    | (if c & 4 != 0 { 1 } else { 0 })
+                                    | (if c & 8 != 0 { 2 } else { 0 });
                                 current_bits += 1;
                                 if current_bits == 2 {
                                     bytes.push(current_byte);
@@ -229,11 +260,11 @@ fn main() -> Result<()> {
                                 } else {
                                     current_byte <<= 2;
                                 };
-                            },
+                            }
                             "320B" => {
                                 let c = cx.unwrap();
-                                current_byte |= (if c & 1 != 0 { 1 } else { 0 }) |
-                                    (if c & 2 != 0 { 16 } else { 0 });
+                                current_byte |= (if c & 1 != 0 { 1 } else { 0 })
+                                    | (if c & 2 != 0 { 16 } else { 0 });
                                 current_bits += 1;
                                 if current_bits == 4 {
                                     bytes.push(current_byte);
@@ -242,7 +273,7 @@ fn main() -> Result<()> {
                                 } else {
                                     current_byte <<= 1;
                                 };
-                            },
+                            }
                             "320C" => {
                                 let c = cx.unwrap();
                                 //println!("Color: {}", c);
@@ -259,7 +290,8 @@ fn main() -> Result<()> {
                                     bytes.push(current_byte);
                                     current_byte = 0;
                                     current_bits = 0;
-                                }                        },
+                                }
+                            }
                             _ => unreachable!(),
                         };
                     }
@@ -271,10 +303,21 @@ fn main() -> Result<()> {
                 if let Some(b) = sprite_sheet.bank {
                     print!("bank{} ", b);
                 }
-                let holeydmasize = if let Some(h) = sprite_sheet.holeydma { h } else if sprite.height == 8 { 8 } else { 16 };
+                let holeydmasize = if let Some(h) = sprite_sheet.holeydma {
+                    h
+                } else if sprite.height == 8 {
+                    8
+                } else {
+                    16
+                };
                 if holeydmasize == 16 && sprite.height == 8 {
                     // This is a special case: small sprite for 16 holey DMA (a bullet for instance)
-                    print!("reversed scattered(16,{}) char {}[{}] = {{\n\t", bytes.len() / 8, sprite.name, bytes.len() * 2);
+                    print!(
+                        "reversed scattered(16,{}) char {}[{}] = {{\n\t",
+                        bytes.len() / 8,
+                        sprite.name,
+                        bytes.len() * 2
+                    );
                     let mut c = 1;
                     for i in 0..bytes.len() {
                         print!("0x{:02x}", bytes[i]);
@@ -284,7 +327,7 @@ fn main() -> Result<()> {
                             print!(",\n\t");
                         }
                         c += 1;
-                    } 
+                    }
                     for _ in 0..bytes.len() - 1 {
                         print!("0x00");
                         if c % 16 != 0 {
@@ -293,16 +336,25 @@ fn main() -> Result<()> {
                             print!(",\n\t");
                         }
                         c += 1;
-                    } 
+                    }
                     println!("0x00\n}};");
                 } else {
                     let nb_sprites = sprite.height / holeydmasize as u32;
                     if nb_sprites * holeydmasize as u32 != sprite.height {
-                        return Err(anyhow!("Sprite {}: height not propportional to 8 or 16", sprite.name));
+                        return Err(anyhow!(
+                            "Sprite {}: height not propportional to 8 or 16",
+                            sprite.name
+                        ));
                     }
                     let mut c = 0;
                     let l = bytes.len() / nb_sprites as usize;
-                    print!("reversed scattered({},{}) char {}[{}] = {{\n\t", holeydmasize, l / holeydmasize as usize, sprite.name, l);
+                    print!(
+                        "reversed scattered({},{}) char {}[{}] = {{\n\t",
+                        holeydmasize,
+                        l / holeydmasize as usize,
+                        sprite.name,
+                        l
+                    );
                     for _ in 0..l - 1 {
                         print!("0x{:02x}", bytes[c]);
                         if (c + 1) % 16 != 0 {
@@ -311,7 +363,7 @@ fn main() -> Result<()> {
                             print!(",\n\t");
                         }
                         c += 1;
-                    } 
+                    }
                     println!("0x{:02x}\n}};", bytes[c]);
                     c += 1;
                     for i in 1..nb_sprites {
@@ -321,7 +373,14 @@ fn main() -> Result<()> {
                         if let Some(b) = sprite_sheet.bank {
                             print!("bank{} ", b);
                         }
-                        print!("reversed scattered({},{}) char {}_{}[{}] = {{\n\t", holeydmasize, l / holeydmasize as usize, sprite.name, i, l);
+                        print!(
+                            "reversed scattered({},{}) char {}_{}[{}] = {{\n\t",
+                            holeydmasize,
+                            l / holeydmasize as usize,
+                            sprite.name,
+                            i,
+                            l
+                        );
                         for _ in 0..l - 1 {
                             print!("0x{:02x}", bytes[c]);
                             if (c + 1) % 16 != 0 {
@@ -330,7 +389,7 @@ fn main() -> Result<()> {
                                 print!(",\n\t");
                             }
                             c += 1;
-                        } 
+                        }
                         println!("0x{:02x}\n}};", bytes[c]);
                         c += 1;
                     }
@@ -353,9 +412,11 @@ fn main() -> Result<()> {
                 }
                 if let Some(sp1) = s1 {
                     if let Some(sp2) = s2 {
-                        let mode = if let Some(s) = &sp1.mode { s.as_str() } else {
+                        let mode = if let Some(s) = &sp1.mode {
+                            s.as_str()
+                        } else {
                             sprite_sheet.mode.as_str()
-                        }; 
+                        };
                         let pixel_width = match mode {
                             "320A" | "320B" | "320C" | "320D" => 1,
                             _ => 2,
@@ -364,27 +425,37 @@ fn main() -> Result<()> {
                         let w2 = (sp2.width / pixel_width) as usize;
                         let h1 = sp1.height as usize;
                         let h2 = sp2.height as usize;
-                        let mut s1map = vec![false;w1 * h1];
+                        let mut s1map = vec![false; w1 * h1];
                         // Fill s1map and s2map
                         for y in 0..h1 {
                             for x in 0..w1 {
-                                let color = img.get_pixel(sp1.left + x as u32 * pixel_width, sp1.top + y as u32);
-                                if color[3] != 0 && (color[0] != 0 || color[1] != 0 || color[2] != 0) {
+                                let color = img.get_pixel(
+                                    sp1.left + x as u32 * pixel_width,
+                                    sp1.top + y as u32,
+                                );
+                                if color[3] != 0
+                                    && (color[0] != 0 || color[1] != 0 || color[2] != 0)
+                                {
                                     s1map[x + y * w1] = true;
                                 }
                             }
                         }
-                        let mut s2map = vec![false;w2 * h2];
+                        let mut s2map = vec![false; w2 * h2];
                         for y in 0..h2 {
                             for x in 0..w2 {
-                                let color = img.get_pixel(sp2.left + x as u32 * pixel_width, sp2.top + y as u32);
-                                if color[3] != 0 && (color[0] != 0 || color[1] != 0 || color[2] != 0) {
+                                let color = img.get_pixel(
+                                    sp2.left + x as u32 * pixel_width,
+                                    sp2.top + y as u32,
+                                );
+                                if color[3] != 0
+                                    && (color[0] != 0 || color[1] != 0 || color[2] != 0)
+                                {
                                     s2map[x + y * w2] = true;
                                 }
                             }
                         }
                         // Ok, now we can compute the collision map
-                        let mut cmap = vec![false;(w1 + w2 - 1) * (h1 + h2 - 1)];
+                        let mut cmap = vec![false; (w1 + w2 - 1) * (h1 + h2 - 1)];
                         for y in 0..(h1 + h2 - 1) {
                             for x in 0..(w1 + w2 - 1) {
                                 for y1 in 0..h1 {
@@ -393,8 +464,12 @@ fn main() -> Result<()> {
                                             // Check in s2map
                                             let x2 = (x1 + x) as i32 - w1 as i32 + 1;
                                             let y2 = (y1 + y) as i32 - h1 as i32 + 1;
-                                            if x2 >= 0 && x2 < w2 as i32 && y2 >= 0 && y2 < h2 as i32 {
-                                                if s2map[x2 as usize + y2 as usize * w2 ] {
+                                            if x2 >= 0
+                                                && x2 < w2 as i32
+                                                && y2 >= 0
+                                                && y2 < h2 as i32
+                                            {
+                                                if s2map[x2 as usize + y2 as usize * w2] {
                                                     cmap[x + y * (w1 + w2 - 1)] = true;
                                                     break;
                                                 }
@@ -406,21 +481,26 @@ fn main() -> Result<()> {
                         }
                         // Debug print of the collision map :
                         /*
-                           let mut i = 0;
-                           for c in &cmap {
-                           if i % (w1 + w2 - 1) == 0 {
-                           print!("\n");
-                           } 
-                           if *c {
-                           print!("***");
-                           } else {
-                           print!("   ");
-                           }
-                           i += 1;
-                           }*/
+                        let mut i = 0;
+                        for c in &cmap {
+                        if i % (w1 + w2 - 1) == 0 {
+                        print!("\n");
+                        }
+                        if *c {
+                        print!("***");
+                        } else {
+                        print!("   ");
+                        }
+                        i += 1;
+                        }*/
                         // Store it in binary format
                         let w = (w1 + w2 - 1) / 8 + 1;
-                        print!("\nconst char collision_{}_{}[{}] = {{", &sp1.name, &sp2.name, w * (h1 + h2 - 1));
+                        print!(
+                            "\nconst char collision_{}_{}[{}] = {{",
+                            &sp1.name,
+                            &sp2.name,
+                            w * (h1 + h2 - 1)
+                        );
                         let mut c = w * (h1 + h2 - 1);
                         for y in 0..h1 + h2 - 1 {
                             for wc in 0..w {
@@ -442,15 +522,20 @@ fn main() -> Result<()> {
                         }
                         println!("}};");
                     } else {
-                        return Err(anyhow!("Collision computation: Unknown sprite2 {}", collision.sprite1));
-                    } 
+                        return Err(anyhow!(
+                            "Collision computation: Unknown sprite2 {}",
+                            collision.sprite1
+                        ));
+                    }
                 } else {
-                    return Err(anyhow!("Collision computation: Unknown sprite1 {}", collision.sprite1));
+                    return Err(anyhow!(
+                        "Collision computation: Unknown sprite1 {}",
+                        collision.sprite1
+                    ));
                 }
-
             }
         }
-    } 
+    }
 
     Ok(())
 }
