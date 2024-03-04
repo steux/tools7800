@@ -31,8 +31,8 @@ sprite_sheets:
         palette: ball_suitcase
         mode: 320C
       - name: ball_odd
-        left: 16
-        top: 16
+        left: 24
+        top: 8
         height: 8
         width: 8
         palette: ball_suitcase
@@ -47,5 +47,5 @@ sprite_sheets:
         left: 0
         top: 16
         height: 8
-        width: 8
+        width: 56
         mode: 320A
