@@ -60,16 +60,18 @@ sprite_sheets:
         top: 24
         height: 8
         width: 16
-        mode: 320C
-      - name: dollar_brick
-        left: 16
-        top: 24
-        height: 8
-        width: 16
+        palette: bricks
         mode: 320C
       - name: indestructible_brick
         left: 32
         top: 24
         height: 8
         width: 16
+        palette: bricks
         mode: 320C
+      - name: dollar_brick
+        left: 16
+        top: 24
+        height: 8
+        width: 16
+        mode: 320A
