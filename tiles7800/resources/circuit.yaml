@@ -7,29 +7,34 @@ palettes:
       - [236, 236, 236] # white
 sprite_sheets:
   - image: circuit.png
+    holeydma: 8
     sprites:
       - name: borders 
         left: 0
         top: 0
         height: 8
-        width: 64
+        width: 32
         holeydma: false
         palette: circuit
+        palette_number: 4
         mode: 320C
       - name: grass
-        left: 64
+        left: 32 
         top: 0
         height: 8
         width: 8 
         holeydma: false
         mode: 320A
+        palette_number: 5
       - name: sharp_turn 
-        left: 80 
+        left: 40
         top: 0
         height: 8
         width: 16
         holeydma: false
         mode: 320C
+        palette: circuit
+        palette_number: 4
       - name: inner_turn1
         left: 8
         top: 8
@@ -38,6 +43,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: inner_turn2
         left: 0
         top: 16 
@@ -46,6 +52,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: inner_turn3
         left: 48 
         top: 16 
@@ -54,6 +61,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: inner_turn4
         left: 0 
         top: 24 
@@ -62,6 +70,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: inner_turn5
         left: 56 
         top: 24 
@@ -70,6 +79,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: inner_turn6
         left: 0
         top: 56 
@@ -78,6 +88,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: inner_turn7
         left: 48 
         top: 56 
@@ -86,6 +97,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: inner_turn8
         left: 8
         top: 64 
@@ -94,6 +106,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: outer_turn1
         left: 80
         top: 8
@@ -102,6 +115,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: outer_turn2
         left: 72 
         top: 16
@@ -110,6 +124,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: outer_turn3
         left: 64 
         top: 24
@@ -118,6 +133,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: outer_turn4
         left: 112 
         top: 24
@@ -126,6 +142,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: outer_turn5
         left: 64 
         top: 48 
@@ -134,6 +151,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: outer_turn6
         left: 112 
         top: 48
@@ -142,6 +160,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: outer_turn7
         left: 72 
         top: 56 
@@ -150,6 +169,7 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
+        palette_number: 4
       - name: outer_turn8
         left: 80
         top: 64
@@ -158,6 +178,4 @@ sprite_sheets:
         holeydma: false
         palette: circuit
         mode: 320C
-
-
-
+        palette_number: 4

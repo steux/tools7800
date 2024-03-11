@@ -1,3 +1,7 @@
+v0.3.4 (03/11/2023) :
+	- Set limit to 16 to tileset size (each tile can be 2 bytes wide)
+	- Implemented 8x8 tiles support
+
 v0.3.3 (10/27/2023) :
 	- Added limit of 31 to tileset size 
 	- Added mirror option for sprites (only vertical at the moment)

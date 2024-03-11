@@ -1,6 +1,6 @@
 [package]
 name = "tiles7800"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2021"
 authors = ["Bruno STEUX <bruno.steux@gmail.com>"]
 license = "GPL-3.0-or-later"
@@ -19,4 +19,4 @@ clap = { version = "4", features = ["derive"] }
 clap_derive = "4"
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"
-image = "0.24"
+image = "0.25"
