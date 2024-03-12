@@ -44,8 +44,6 @@ struct Sprite {
     width: u32,
     #[serde(default = "default_holeydma")]
     holeydma: bool,
-    #[serde(default = "default_sprite_size")]
-    height: u32,
     #[serde(default)]
     palette: Option<String>,
     #[serde(default)]
@@ -363,7 +361,7 @@ fn main() -> Result<()> {
                     let nb_sprites = sprite.height / holeydmasize as u32;
                     if nb_sprites * holeydmasize as u32 != sprite.height {
                         return Err(anyhow!(
-                            "Sprite {}: height not propportional to 8 or 16",
+                            "Sprite {}: height not proportional to 8 or 16",
                             sprite.name
                         ));
                     }

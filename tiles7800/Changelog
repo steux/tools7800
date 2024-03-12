@@ -1,4 +1,7 @@
-v0.3.4 (03/11/2023) :
+v0.3.5 (03/12/2024) :
+	- Implemented immediate mode sparse tiling code generation
+
+v0.3.4 (03/11/2024) :
 	- Set limit to 16 to tileset size (each tile can be 2 bytes wide)
 	- Implemented 8x8 tiles support
 

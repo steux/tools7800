@@ -1,4 +1,6 @@
+use anyhow::{anyhow, Result};
 use clap::Parser;
+use image::{GenericImageView, Rgba};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::error;
@@ -24,6 +26,9 @@ struct Args {
     /// Tileset maximum size
     #[arg(short, long)]
     maxsize: Option<usize>,
+    /// Generate immediate mode sparse tiling
+    #[arg(short, long, default_value = "false")]
+    immediate: bool,
 }
 
 #[allow(unused)]
@@ -84,12 +89,13 @@ struct Sprite {
     background: Option<String>,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 struct Tile<'a> {
     index: u32,
     mode: &'a str,
     palette_number: u8,
     background: Option<u32>,
+    gfx: Vec<u8>,
 }
 
 fn default_sprite_size() -> u32 {
@@ -102,6 +108,224 @@ fn default_mode() -> String {
     "160A".to_string()
 }
 
+fn sprite_gfx(
+    img: &dyn GenericImageView<Pixel = Rgba<u8>>,
+    all_sprites: &AllSprites,
+    sprite_sheet: &SpriteSheet,
+    sprite: &Sprite,
+) -> Result<Vec<u8>> {
+    let mode = if let Some(s) = &sprite.mode {
+        s.as_str()
+    } else {
+        sprite_sheet.mode.as_str()
+    };
+
+    let pixel_width = match mode {
+        "320A" | "320B" | "320C" | "320D" => 1,
+        _ => 2,
+    };
+    let pixel_bits = match mode {
+        "320A" | "320D" => 1,
+        "160B" => 4,
+        _ => 2,
+    };
+    let maxcolors = match mode {
+        "160A" => 3,
+        "160B" => 12,
+        "320A" => 1,
+        "320B" => 3,
+        "320C" => 4,
+        "320D" => 1,
+        _ => return Err(anyhow!("Unknown gfx {} mode", mode)),
+    };
+
+    let mut colors = [(0u8, 0u8, 0u8); 12];
+    if maxcolors != 1 {
+        if let Some(palettes) = &all_sprites.palettes {
+            if let Some(pname) = &sprite.palette {
+                let px = palettes.into_iter().find(|x| &x.name == pname);
+                if let Some(p) = px {
+                    let mut i = 0;
+                    for c in &p.colors {
+                        colors[i] = *c;
+                        i += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    let mut bytes = Vec::<u8>::new();
+    for y in 0..sprite.height {
+        let mut current_byte: u8 = 0;
+        let mut current_bits: u8 = 0;
+        for x in 0..sprite.width / pixel_width {
+            let xp = sprite.left + x * pixel_width;
+            let yp = sprite.top + y;
+            let color = img.get_pixel(xp, yp);
+            let mut cx: Option<u8> = None;
+            // In case of defined palette, priority is to find the color in the palette, so that black is not considered as a background color
+            if (color[3] != 0 && sprite.palette.is_some())
+                || (sprite.palette.is_none() && (color[0] != 0 || color[1] != 0 || color[2] != 0))
+            {
+                // Not transparent
+                for c in 0..maxcolors {
+                    if color[0] == colors[c].0 && color[1] == colors[c].1 && color[2] == colors[c].2
+                    {
+                        // Ok. this is a pixel of color c
+                        cx = Some((c + 1) as u8);
+                        // 320C mode contraint check
+                        if mode == "320C" {
+                            // Check next pixel, should be background or same color
+                            if x & 1 == 0 {
+                                let colorr = img
+                                    .get_pixel(sprite.left + x * pixel_width + 1, sprite.top + y);
+                                if !(colorr[3] == 0
+                                    || (colorr[0] == 0 && colorr[1] == 0 && colorr[2] == 0))
+                                {
+                                    // This is not background
+                                    if colorr != color {
+                                        return Err(anyhow!("Sprite {}: Two consecutive pixels have a different color in 320C mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", sprite.name, x, y, color, colorr));
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            if cx.is_none() {
+                if color[3] == 0 || (color[0] == 0 && color[1] == 0 && color[2] == 0) {
+                    cx = Some(0); // Background color (either black or transparent)
+                } else {
+                    // Let's find a unaffected color
+                    for c in 0..maxcolors {
+                        if colors[c].0 == 0 && colors[c].1 == 0 && colors[c].2 == 0 {
+                            colors[c].0 = color[0];
+                            colors[c].1 = color[1];
+                            colors[c].2 = color[2];
+                            cx = Some((c + 1) as u8);
+                            //println!("color {c} affected to {:?}", color);
+                            if mode == "320C" {
+                                // Check next pixel, should be background or same color
+                                if x & 1 == 0 {
+                                    let colorr = img.get_pixel(
+                                        sprite.left + x * pixel_width + 1,
+                                        sprite.top + y,
+                                    );
+                                    if !(colorr[3] == 0
+                                        || (colorr[0] == 0 && colorr[1] == 0 && colorr[2] == 0))
+                                    {
+                                        // This is not background
+                                        if colorr != color {
+                                            return Err(anyhow!("Sprite {}: Two consecutive pixels have a different color in 320C mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", sprite.name, x, y, color, colorr));
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    if cx.is_none() {
+                        if sprite.background.is_some() {
+                            // If a background is specified
+                            cx = Some(0); // This unknown color is affected to background
+                        } else {
+                            println!(
+                                "Unexpected color {:?} found at {},{}",
+                                color,
+                                sprite.left + x * pixel_width,
+                                sprite.top + y
+                            );
+                            return Err(anyhow!(
+                                "Sprite {} has more than {} colors",
+                                sprite.name,
+                                maxcolors
+                            ));
+                        }
+                    }
+                }
+            }
+            match mode {
+                "160A" | "320A" | "320D" => {
+                    current_byte |= cx.unwrap();
+                    current_bits += pixel_bits;
+                    if current_bits == 8 {
+                        bytes.push(current_byte);
+                        current_byte = 0;
+                        current_bits = 0;
+                    } else {
+                        current_byte <<= pixel_bits;
+                    };
+                }
+                "160B" => {
+                    let c = match cx.unwrap() {
+                        0 => 0,
+                        1 => 1,
+                        2 => 2,
+                        3 => 3,
+                        4 => 5,
+                        5 => 6,
+                        6 => 7,
+                        7 => 9,
+                        8 => 10,
+                        9 => 11,
+                        10 => 13,
+                        11 => 14,
+                        12 => 15,
+                        _ => 0,
+                    };
+                    current_byte |= (if c & 1 != 0 { 16 } else { 0 })
+                        | (if c & 2 != 0 { 32 } else { 0 })
+                        | (if c & 4 != 0 { 1 } else { 0 })
+                        | (if c & 8 != 0 { 2 } else { 0 });
+                    current_bits += 1;
+                    if current_bits == 2 {
+                        bytes.push(current_byte);
+                        current_byte = 0;
+                        current_bits = 0;
+                    } else {
+                        current_byte <<= 2;
+                    };
+                }
+                "320B" => {
+                    let c = cx.unwrap();
+                    current_byte |=
+                        (if c & 1 != 0 { 1 } else { 0 }) | (if c & 2 != 0 { 16 } else { 0 });
+                    current_bits += 1;
+                    if current_bits == 4 {
+                        bytes.push(current_byte);
+                        current_byte = 0;
+                        current_bits = 0;
+                    } else {
+                        current_byte <<= 1;
+                    };
+                }
+                "320C" => {
+                    let c = cx.unwrap();
+                    //println!("Color: {}", c);
+                    if c != 0 {
+                        current_byte |= 1 << (7 - current_bits);
+                        if current_bits < 2 {
+                            current_byte |= (c - 1) << 2;
+                        } else {
+                            current_byte |= c - 1;
+                        }
+                    }
+                    current_bits += 1;
+                    if current_bits == 4 {
+                        bytes.push(current_byte);
+                        current_byte = 0;
+                        current_bits = 0;
+                    }
+                }
+                _ => unreachable!(),
+            };
+        }
+    }
+    Ok(bytes)
+}
+
 fn main() -> Result<(), Box<dyn error::Error>> {
     let mut width = 0;
     let mut height = 0;
@@ -110,7 +334,6 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let args = Args::parse();
     let xml = fs::read_to_string(args.filename).expect("Unable to read input file");
     let varname = args.varname.unwrap_or("tilemap".into());
-    let tileset_maxsize = args.maxsize.unwrap_or(16);
 
     let dom = xml_dom::parser::read_xml(&xml)?;
     let root = dom.first_child().unwrap();
@@ -161,6 +384,8 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                             .collect::<Vec<_>>();
                         if array.len() == width * height {
                             if let Some(yaml_file) = args.yaml {
+                                let tileset_maxsize =
+                                    args.maxsize.unwrap_or(if tilewidth == 8 { 16 } else { 8 });
                                 let contents = fs::read_to_string(yaml_file)
                                     .expect("Unable to read input file");
                                 let t: AllSprites = serde_yaml::from_str(&contents)?;
@@ -177,8 +402,14 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                 let defmode = tiles_sheet.mode.as_str();
                                 let mut tiles = HashMap::<u32, Tile>::new();
                                 let mut aliases = HashMap::<&str, u32>::new();
-                                let mut refs = HashMap::<u32, u32>::new();
+                                let mut refs = HashMap::<u32, u32>::new(); // Mapping from tile number in the Atari tiles array to tile number in tiled array
+                                let bytes_per_tile: usize = if tilewidth == 8 { 1 } else { 2 };
                                 for tile in &tiles_sheet.sprites {
+                                    let gfx = if args.immediate {
+                                        sprite_gfx(&img, &t, tiles_sheet, tile)?
+                                    } else {
+                                        Vec::<u8>::new()
+                                    };
                                     let mode = if let Some(m) = &tile.mode {
                                         m.as_str()
                                     } else {
@@ -237,6 +468,28 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                     };
                                     for j in 0..nbtilesy {
                                         for i in 0..nbtilesx {
+                                            let tgfx = if args.immediate {
+                                                let w = bytes_per_tile
+                                                    * match mode {
+                                                        "160A" | "320A" | "320D" => 1,
+                                                        _ => 2,
+                                                    };
+                                                let mut t = Vec::<u8>::new();
+                                                for y in 0..tileheight {
+                                                    for c in 0..w {
+                                                        t.push(
+                                                            gfx[((j * tileheight + y) as usize
+                                                                * w
+                                                                * nbtilesx as usize)
+                                                                + i as usize * w
+                                                                + c],
+                                                        )
+                                                    }
+                                                }
+                                                t
+                                            } else {
+                                                Vec::<u8>::new()
+                                            };
                                             tiles.insert(
                                                 ix + i + j * image_width / tilewidth,
                                                 Tile {
@@ -244,14 +497,11 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                                     mode,
                                                     palette_number,
                                                     background,
+                                                    gfx: tgfx.clone(),
                                                 },
                                             );
                                             if let Some(Mirror::Vertical) = tiles_sheet.mirror {
-                                                let bg = if let Some(b) = background {
-                                                    Some(b + 1)
-                                                } else {
-                                                    None
-                                                };
+                                                let bg = background.map(|b| b + 1);
                                                 tiles.insert(
                                                     ixx + i - j * image_width / tilewidth,
                                                     Tile {
@@ -259,6 +509,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                                         mode,
                                                         palette_number,
                                                         background: bg,
+                                                        gfx: tgfx,
                                                     },
                                                 );
                                             }
@@ -547,82 +798,198 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                             deferred_tileset[i].clone(),
                                         ));
                                     }
-                                    // Write this line data
+                                    // Write this line of data
                                     {
                                         let mut c = 0;
                                         let mut w = Vec::new();
                                         let mut tile_names = Vec::new();
-                                        let bytes_per_tile = if tilewidth == 8 { 1 } else { 2 };
-                                        for s in &tilesets {
-                                            let mut tn = Vec::new();
-                                            for t in &s.1 {
-                                                let nb = match t.mode {
-                                                    "160A" | "320A" | "320D" => 1,
-                                                    _ => 2,
-                                                };
-                                                for i in 0..nb {
-                                                    tn.push(t.index + i * bytes_per_tile);
+                                        if args.immediate {
+                                            for s in &tilesets {
+                                                let mut tn = Vec::new();
+                                                let mut l = 0;
+                                                for t in &s.1 {
+                                                    let nb = match t.mode {
+                                                        "160A" | "320A" | "320D" => 1,
+                                                        _ => 2,
+                                                    };
+                                                    for i in 0..nb {
+                                                        tn.push(
+                                                            t.index + (i * bytes_per_tile) as u32,
+                                                        );
+                                                    }
+                                                    l += nb * bytes_per_tile;
+                                                }
+                                                w.push(l);
+
+                                                // 1st optimization : look in the tiles_store if it's already there
+                                                let mut found = None;
+                                                for c in &tiles_store {
+                                                    if c.1 == tn {
+                                                        found = Some(c.0.clone());
+                                                    }
+                                                }
+                                                if let Some(name) = found {
+                                                    tile_names.push(name);
+                                                } else if l != 0 {
+                                                    let name = format!("{}_{}_{}", varname, y, c);
+                                                    if let Some(b) = tiles_sheet.bank {
+                                                        print!("bank{b} ");
+                                                    }
+                                                    print!(
+                                                            "reversed scattered({},{}) char {}[{}] = {{\n\t",
+                                                            tileheight,
+                                                            l,
+                                                            &name,
+                                                            l * tileheight as usize
+                                                        );
+                                                    let mut i = 0;
+                                                    for y in 0..tileheight as usize {
+                                                        for t in &s.1 {
+                                                            let nb = match t.mode {
+                                                                "160A" | "320A" | "320D" => 1,
+                                                                _ => 2,
+                                                            };
+                                                            for b in 0..(nb * bytes_per_tile) {
+                                                                print!(
+                                                                    "0x{:02x}",
+                                                                    t.gfx[y
+                                                                        * (nb * bytes_per_tile)
+                                                                        + b]
+                                                                );
+                                                                if i != l * tileheight as usize - 1
+                                                                {
+                                                                    if (i + 1) % 16 != 0 {
+                                                                        print!(", ");
+                                                                    } else {
+                                                                        print!(",\n\t");
+                                                                    }
+                                                                }
+                                                                i += 1;
+                                                            }
+                                                        }
+                                                    }
+                                                    println!("}};");
+                                                    c += 1;
+                                                    tiles_store.push((name.clone(), tn));
+                                                    tile_names.push(name);
                                                 }
                                             }
-                                            w.push(tn.len());
-
-                                            // 1st optimization : look in the tiles_store if it's already there
+                                            c = 0;
+                                            let mut tilemap_str = String::new();
+                                            for s in &tilesets {
+                                                let ttype = s.1.first().unwrap();
+                                                let write_mode = match ttype.mode {
+                                                    "160A" | "320A" | "320D" => 0x40,
+                                                    _ => 0xc0,
+                                                };
+                                                tilemap_str.push_str(&format!("{}, {}, {}, 0x{:02x}, {} >> 8, ({} << 5) | ((-{}) & 0x1f), {}, ", 
+                                                    s.0 + s.1.len() as u32 - 1, s.0, tile_names[c], write_mode, tile_names[c], ttype.palette_number, w[c], (10 + 3 * w[c]) / 2));
+                                                c += 1;
+                                            }
                                             let mut found = None;
-                                            for c in &tiles_store {
-                                                if c.1 == tn {
+                                            for c in &tilesmap_store {
+                                                if c.1 == tilemap_str {
                                                     found = Some(c.0.clone());
                                                 }
                                             }
                                             if let Some(name) = found {
-                                                tile_names.push(name);
-                                            } else if !tn.is_empty() {
-                                                let name = format!("{}_{}_{}", varname, y, c);
+                                                tilesmap.push(name);
+                                            } else {
+                                                let tilemap_name =
+                                                    format!("{}_{}_data", varname, y);
                                                 if let Some(b) = tiles_sheet.bank {
                                                     print!("bank{b} ");
                                                 }
-                                                print!("const char {}[{}] = {{", &name, tn.len());
-                                                for i in 0..tn.len() - 1 {
-                                                    print!("{}, ", tn[i]);
-                                                }
-                                                println!("{}}};", tn[tn.len() - 1]);
-                                                c += 1;
-                                                tiles_store.push((name.clone(), tn));
-                                                tile_names.push(name);
+                                                println!(
+                                                    "const char {}[] = {{{}96, 0xff}};",
+                                                    &tilemap_name, tilemap_str
+                                                );
+                                                tilesmap_store.push((
+                                                    tilemap_name.clone(),
+                                                    tilemap_str.clone(),
+                                                ));
+                                                tilesmap.push(tilemap_name);
                                             }
-                                        }
-                                        c = 0;
-                                        let mut tilemap_str = String::new();
-                                        for s in &tilesets {
-                                            let ttype = s.1.first().unwrap();
-                                            let write_mode = match ttype.mode {
-                                                "160A" | "320A" | "320D" => 0x60,
-                                                _ => 0xE0,
-                                            };
-                                            tilemap_str.push_str(&format!("{}, {}, {}, 0x{:02x}, {} >> 8, ({} << 5) | ((-{}) & 0x1f), {}, ", 
-                                                    s.0 + s.1.len() as u32 - 1, s.0, tile_names[c], write_mode, tile_names[c], ttype.palette_number, w[c], (10 + 3 + 9 * w[c]) / 2));
-                                            c += 1;
-                                        }
-
-                                        let mut found = None;
-                                        for c in &tilesmap_store {
-                                            if c.1 == tilemap_str {
-                                                found = Some(c.0.clone());
-                                            }
-                                        }
-                                        if let Some(name) = found {
-                                            tilesmap.push(name);
                                         } else {
-                                            let tilemap_name = format!("{}_{}_data", varname, y);
-                                            if let Some(b) = tiles_sheet.bank {
-                                                print!("bank{b} ");
+                                            for s in &tilesets {
+                                                let mut tn = Vec::new();
+                                                for t in &s.1 {
+                                                    let nb = match t.mode {
+                                                        "160A" | "320A" | "320D" => 1,
+                                                        _ => 2,
+                                                    };
+                                                    for i in 0..nb {
+                                                        tn.push(
+                                                            t.index + (i * bytes_per_tile) as u32,
+                                                        );
+                                                    }
+                                                }
+                                                w.push(tn.len());
+
+                                                // 1st optimization : look in the tiles_store if it's already there
+                                                let mut found = None;
+                                                for c in &tiles_store {
+                                                    if c.1 == tn {
+                                                        found = Some(c.0.clone());
+                                                    }
+                                                }
+                                                if let Some(name) = found {
+                                                    tile_names.push(name);
+                                                } else if !tn.is_empty() {
+                                                    let name = format!("{}_{}_{}", varname, y, c);
+                                                    if let Some(b) = tiles_sheet.bank {
+                                                        print!("bank{b} ");
+                                                    }
+                                                    print!(
+                                                        "const char {}[{}] = {{",
+                                                        &name,
+                                                        tn.len()
+                                                    );
+                                                    for i in 0..tn.len() - 1 {
+                                                        print!("{}, ", tn[i]);
+                                                    }
+                                                    println!("{}}};", tn[tn.len() - 1]);
+                                                    c += 1;
+                                                    tiles_store.push((name.clone(), tn));
+                                                    tile_names.push(name);
+                                                }
                                             }
-                                            println!(
-                                                "const char {}[] = {{{}96, 0xff}};",
-                                                &tilemap_name, tilemap_str
-                                            );
-                                            tilesmap_store
-                                                .push((tilemap_name.clone(), tilemap_str.clone()));
-                                            tilesmap.push(tilemap_name);
+                                            c = 0;
+                                            let mut tilemap_str = String::new();
+                                            for s in &tilesets {
+                                                let ttype = s.1.first().unwrap();
+                                                let write_mode = match ttype.mode {
+                                                    "160A" | "320A" | "320D" => 0x60,
+                                                    _ => 0xe0,
+                                                };
+                                                tilemap_str.push_str(&format!("{}, {}, {}, 0x{:02x}, {} >> 8, ({} << 5) | ((-{}) & 0x1f), {}, ", 
+                                                    s.0 + s.1.len() as u32 - 1, s.0, tile_names[c], write_mode, tile_names[c], ttype.palette_number, w[c], (10 + 3 + 9 * w[c]) / 2));
+                                                c += 1;
+                                            }
+                                            let mut found = None;
+                                            for c in &tilesmap_store {
+                                                if c.1 == tilemap_str {
+                                                    found = Some(c.0.clone());
+                                                }
+                                            }
+                                            if let Some(name) = found {
+                                                tilesmap.push(name);
+                                            } else {
+                                                let tilemap_name =
+                                                    format!("{}_{}_data", varname, y);
+                                                if let Some(b) = tiles_sheet.bank {
+                                                    print!("bank{b} ");
+                                                }
+                                                println!(
+                                                    "const char {}[] = {{{}96, 0xff}};",
+                                                    &tilemap_name, tilemap_str
+                                                );
+                                                tilesmap_store.push((
+                                                    tilemap_name.clone(),
+                                                    tilemap_str.clone(),
+                                                ));
+                                                tilesmap.push(tilemap_name);
+                                            }
                                         }
                                     }
                                 }
