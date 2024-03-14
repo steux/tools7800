@@ -35,6 +35,14 @@ sprite_sheets:
         mode: 320C
         palette: circuit
         palette_number: 4
+      - name: starting_line
+        left: 56 
+        top: 0
+        height: 8
+        width: 8 
+        holeydma: false
+        mode: 320A
+        palette_number: 7
       - name: inner_turn1
         left: 8
         top: 8

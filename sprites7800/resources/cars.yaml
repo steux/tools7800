@@ -9,10 +9,10 @@ sprite_sheets:
   - image: steering_wheel.png
     sprites:
       - name: steering_wheel1
-        left: 8
+        left: 0
         top: 8
         height: 8
-        width: 48
+        width: 56
         mode: 320A
       - name: steering_wheel2
         left: 0
