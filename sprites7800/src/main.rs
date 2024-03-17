@@ -42,6 +42,8 @@ struct Sprite {
     top: u32,
     left: u32,
     width: u32,
+    #[serde(default = "default_sprite_size")]
+    height: u32,
     #[serde(default = "default_holeydma")]
     holeydma: bool,
     #[serde(default)]
