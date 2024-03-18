@@ -14,6 +14,12 @@ sprite_sheets:
         height: 8
         width: 8
         mode: 320A
+      - name: starting_line 
+        left: 8
+        top: 0
+        height: 8
+        width: 8
+        mode: 320A
       - name: steering_wheel1
         left: 0
         top: 8
@@ -45,168 +51,168 @@ sprite_sheets:
   - image: cars.png
     holeydma: 8
     sprites:
-      - name: stripped_car0
+      - name: car0
         left: 0
         top: 48
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car1
+      - name: car1
         left: 16
         top: 48
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car2
+      - name: car2
         left: 32
         top: 48
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car3
+      - name: car3
         left: 48
         top: 48
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car4
+      - name: car4
         left: 64
         top: 48
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car5
+      - name: car5
         left: 80
         top: 48
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car6
+      - name: car6
         left: 96
         top: 48
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car7
+      - name: car7
         left: 112
         top: 48
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car8
+      - name: car8
         left: 128
         top: 48
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car9
+      - name: car9
         left: 144
         top: 48
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car10
+      - name: car10
         left: 160
         top: 48
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car11
+      - name: car11
         left: 176
         top: 48
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car12
+      - name: car12
         left: 192
         top: 64
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car13
+      - name: car13
         left: 176
         top: 64
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car14
+      - name: car14
         left: 160
         top: 64
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car15
+      - name: car15
         left: 144
         top: 64
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car16
+      - name: car16
         left: 128
         top: 64
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car17
+      - name: car17
         left: 112
         top: 64
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car18
+      - name: car18
         left: 96
         top: 64
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car19
+      - name: car19
         left: 80
         top: 64
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car20
+      - name: car20
         left: 64
         top: 64
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car21
+      - name: car21
         left: 48
         top: 64
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car22
+      - name: car22
         left: 32
         top: 64
         height: 16
         width: 16
         palette: blue_yellow_cars
         mode: 320C
-      - name: stripped_car23
+      - name: car23
         left: 16
         top: 64
         height: 16
