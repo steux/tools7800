@@ -24,6 +24,7 @@ struct SpriteSheet {
     image: String,
     #[serde(default = "default_mode")]
     mode: String,
+    height: Option<u8>,
     holeydma: Option<u8>,
     bank: Option<u8>,
     sprites: Vec<Sprite>,
@@ -318,20 +319,22 @@ fn main() -> Result<()> {
                     }
                 }
                 // Whoaw. We do have our pixels vector. Let's output it
-                if sprite.holeydma {
-                    print!("holeydma ");
-                }
                 if let Some(b) = sprite_sheet.bank {
                     print!("bank{} ", b);
                 }
-                let holeydmasize = if let Some(h) = sprite_sheet.holeydma {
+                let default_height = if let Some(h) = sprite_sheet.holeydma {
+                    h
+                } else if let Some(h) = sprite_sheet.height {
                     h
                 } else if sprite.height == 8 {
                     8
                 } else {
                     16
                 };
-                if holeydmasize == 16 && sprite.height == 8 {
+                if sprite.holeydma && (default_height == 8 || default_height == 16) {
+                    print!("holeydma ");
+                }
+                if default_height == 16 && sprite.height == 8 {
                     // This is a special case: small sprite for 16 holey DMA (a bullet for instance)
                     print!(
                         "reversed scattered(16,{}) char {}[{}] = {{\n\t",
@@ -360,19 +363,21 @@ fn main() -> Result<()> {
                     }
                     println!("0x00\n}};");
                 } else {
-                    let nb_sprites = sprite.height / holeydmasize as u32;
-                    if nb_sprites * holeydmasize as u32 != sprite.height {
+                    let nb_sprites = sprite.height / default_height as u32;
+                    if nb_sprites * default_height as u32 != sprite.height {
                         return Err(anyhow!(
-                            "Sprite {}: height not proportional to 8 or 16",
-                            sprite.name
+                            "Sprite {}: height {} not proportional to default height {}",
+                            sprite.name,
+                            sprite.height,
+                            default_height
                         ));
                     }
                     let mut c = 0;
                     let l = bytes.len() / nb_sprites as usize;
                     print!(
                         "reversed scattered({},{}) char {}[{}] = {{\n\t",
-                        holeydmasize,
-                        l / holeydmasize as usize,
+                        default_height,
+                        l / default_height as usize,
                         sprite.name,
                         l
                     );
@@ -396,8 +401,8 @@ fn main() -> Result<()> {
                         }
                         print!(
                             "reversed scattered({},{}) char {}_{}[{}] = {{\n\t",
-                            holeydmasize,
-                            l / holeydmasize as usize,
+                            default_height,
+                            l / default_height as usize,
                             sprite.name,
                             i,
                             l
