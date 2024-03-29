@@ -24,7 +24,7 @@ struct SpriteSheet {
     image: String,
     #[serde(default = "default_mode")]
     mode: String,
-    height: Option<u8>,
+    default_height: Option<u8>,
     holeydma: Option<u8>,
     bank: Option<u8>,
     sprites: Vec<Sprite>,
@@ -324,7 +324,7 @@ fn main() -> Result<()> {
                 }
                 let default_height = if let Some(h) = sprite_sheet.holeydma {
                     h
-                } else if let Some(h) = sprite_sheet.height {
+                } else if let Some(h) = sprite_sheet.default_height {
                     h
                 } else if sprite.height == 8 {
                     8
@@ -393,7 +393,7 @@ fn main() -> Result<()> {
                     println!("0x{:02x}\n}};", bytes[c]);
                     c += 1;
                     for i in 1..nb_sprites {
-                        if sprite.holeydma {
+                        if sprite.holeydma && (default_height == 8 || default_height == 16) {
                             print!("holeydma ");
                         }
                         if let Some(b) = sprite_sheet.bank {
