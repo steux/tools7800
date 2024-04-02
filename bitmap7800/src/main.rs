@@ -63,6 +63,9 @@ fn main() -> Result<()> {
     let args = Args::parse();
     let contents = fs::read_to_string(args.filename).expect("Unable to read input file");
     let all_bitmaps: AllBitmaps = serde_yaml::from_str(&contents)?;
+
+    let mut store = Vec::<(String, Vec<Vec<u8>>)>::new();
+
     for bitmap_sheet in all_bitmaps.bitmap_sheets {
         let img = image::open(&bitmap_sheet.image)
             .expect(&format!("Can't open image {}", bitmap_sheet.image));
@@ -307,31 +310,48 @@ fn main() -> Result<()> {
                             }
                         }
 
-                        // OK. Now we have our series of bytes. Let's output them
-                        if let Some(b) = bitmap_sheet.bank {
-                            print!("bank{} ", b);
-                        }
-                        print!(
-                            "reversed scattered({},{}) char {}_{}_{}[{}] = {{\n\t",
-                            bitmap_sheet.dl_height,
-                            last - first,
-                            bitmap.name,
-                            yy,
-                            range_counter,
-                            (last - first) * bitmap_sheet.dl_height as usize
-                        );
-                        let mut c = 0;
-                        for bytes in &fullbytes {
-                            for i in first..last {
-                                print!("0x{:02x}", bytes[i]);
-                                if c == (last - first) * bitmap_sheet.dl_height as usize - 1 {
-                                    println!("}};");
-                                } else if (c + 1) % 16 != 0 {
-                                    print!(", ");
-                                } else {
-                                    print!(",\n\t");
+                        // OK. Now we have our series of bytes.
+                        // Let's look for them in the store
+                        let mut found = None;
+                        let mut name = String::new();
+                        for r in &store {
+                            if r.1.len() >= fullbytes.len() {
+                                let f = r.1.windows(fullbytes.len()).position(|w| w == fullbytes);
+                                if f.is_some() {
+                                    found = f;
+                                    name = r.0.clone();
+                                    break;
                                 }
-                                c += 1;
+                            }
+                        }
+                        if let Some(offset) = found {
+                            name = format!("({name} + {offset})");
+                        } else {
+                            // We haven't found it in the store, so Let's output them
+                            name = format!("{}_{}_{}", bitmap.name, yy, range_counter);
+                            if let Some(b) = bitmap_sheet.bank {
+                                print!("bank{} ", b);
+                            }
+                            print!(
+                                "reversed scattered({},{}) char {}[{}] = {{\n\t",
+                                bitmap_sheet.dl_height,
+                                last - first,
+                                name,
+                                (last - first) * bitmap_sheet.dl_height as usize
+                            );
+                            let mut c = 0;
+                            for bytes in &fullbytes {
+                                for i in first..last {
+                                    print!("0x{:02x}", bytes[i]);
+                                    if c == (last - first) * bitmap_sheet.dl_height as usize - 1 {
+                                        println!("}};");
+                                    } else if (c + 1) % 16 != 0 {
+                                        print!(", ");
+                                    } else {
+                                        print!(",\n\t");
+                                    }
+                                    c += 1;
+                                }
                             }
                         }
 
@@ -345,26 +365,31 @@ fn main() -> Result<()> {
                                 "320A" | "160A" => 0x40,
                                 _ => 0xc0,
                             };
-                            dl.push_str(format!("{}_{}_0 & 0xff, 0x{:02x}, {}_{}_0 >> 8, (-{} & 0x1f) | ({} << 5), {}, ", bitmap.name, yy, mode_byte, bitmap.name, yy, last - first, palette, x).as_str());
+                            dl.push_str(
+                                format!(
+                                    "{} & 0xff, 0x{:02x}, {} >> 8, (-{} & 0x1f) | ({} << 5), {}, ",
+                                    name,
+                                    mode_byte,
+                                    name,
+                                    last - first,
+                                    palette,
+                                    x
+                                )
+                                .as_str(),
+                            );
                             nb_bytes += 5;
                         } else {
                             dl.push_str(
                                 format!(
-                                    "{}_{}_{} & 0xff, (-{} & 0x1f) | ({} << 5), {}_{}_{} >> 8, {}, ",
-                                    bitmap.name,
-                                    yy,
-                                    last - first,
-                                    palette,
-                                    range_counter,
-                                    bitmap.name,
-                                    yy,
-                                    range_counter,
-                                    x
+                                    "{} & 0xff, (-{} & 0x1f) | ({} << 5), {} >> 8, {}, ",
+                                    name, palette, range_counter, name, x
                                 )
                                 .as_str(),
                             );
                             nb_bytes += 4;
                         }
+
+                        store.push((name, fullbytes.clone()));
                         range_counter += 1;
                         first = last;
                     }
