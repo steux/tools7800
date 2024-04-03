@@ -430,6 +430,29 @@ fn main() -> Result<()> {
                     dl
                 );
             }
+            println!();
+            let nb_dls = bitmap.height / bitmap_sheet.dl_height as u32;
+            let bitmapname = &bitmap.name;
+            if let Some(b) = bitmap_sheet.bank {
+                print!("bank{b} ");
+            }
+            print!("const char {bitmapname}_data_ptrs_high[{}] = {{", nb_dls);
+            for y in 0..nb_dls - 1 {
+                print!("{bitmapname}_{y}_dl >> 8, ");
+            }
+            println!("{bitmapname}_{}_dl >> 8}};", nb_dls - 1);
+            if let Some(b) = bitmap_sheet.bank {
+                print!("bank{b} ");
+            }
+            print!("const char {bitmapname}_data_ptrs_low[{}] = {{", nb_dls);
+            for y in 0..nb_dls - 1 {
+                print!("{bitmapname}_{y} & 0xff, ");
+            }
+            println!("{bitmapname}_{} & 0xff}};", nb_dls - 1);
+            if let Some(b) = bitmap_sheet.bank {
+                print!("bank{b} ");
+            }
+            println!("const char *{bitmapname}_data_ptrs[2] = {{{bitmapname}_data_ptrs_high, {bitmapname}_data_ptrs_low}};");
         }
     }
 
