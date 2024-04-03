@@ -345,7 +345,7 @@ fn main() -> Result<()> {
                             }
                         }
                         if let Some(offset) = found {
-                            name = format!("({name} + {offset})");
+                            name = format!("{name} + {offset}");
                         } else {
                             // We haven't found it in the store, so Let's output them
                             name = format!("{}_{}_{}", bitmap.name, yy, range_counter);
@@ -446,9 +446,9 @@ fn main() -> Result<()> {
             }
             print!("const char {bitmapname}_data_ptrs_low[{}] = {{", nb_dls);
             for y in 0..nb_dls - 1 {
-                print!("{bitmapname}_{y} & 0xff, ");
+                print!("{bitmapname}_{y}_dl & 0xff, ");
             }
-            println!("{bitmapname}_{} & 0xff}};", nb_dls - 1);
+            println!("{bitmapname}_{}_dl & 0xff}};", nb_dls - 1);
             if let Some(b) = bitmap_sheet.bank {
                 print!("bank{b} ");
             }
