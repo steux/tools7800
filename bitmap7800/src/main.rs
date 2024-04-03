@@ -311,16 +311,36 @@ fn main() -> Result<()> {
                         }
 
                         // OK. Now we have our series of bytes.
+                        // Reconstruct this array of bytes to be ready to compare with store
+                        let mut bytespart = Vec::<Vec<u8>>::new();
+                        for i in &fullbytes {
+                            bytespart.push(i[first..last].to_vec());
+                        }
+
                         // Let's look for them in the store
                         let mut found = None;
                         let mut name = String::new();
                         for r in &store {
-                            if r.1.len() >= fullbytes.len() {
-                                let f = r.1.windows(fullbytes.len()).position(|w| w == fullbytes);
-                                if f.is_some() {
-                                    found = f;
-                                    name = r.0.clone();
-                                    break;
+                            if r.1[0].len() >= bytespart[0].len() {
+                                let f = r.1[0]
+                                    .windows(bytespart[0].len())
+                                    .position(|w| w == bytespart[0]);
+                                if let Some(offset) = f {
+                                    // Check each line
+                                    let mut ok = true;
+                                    for j in 1..bitmap_sheet.dl_height as usize {
+                                        if r.1[j][offset..offset + bytespart[j].len()]
+                                            != bytespart[j]
+                                        {
+                                            ok = false;
+                                            break;
+                                        }
+                                    }
+                                    if ok {
+                                        found = Some(offset);
+                                        name = r.0.clone();
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -353,6 +373,8 @@ fn main() -> Result<()> {
                                     c += 1;
                                 }
                             }
+                            // Put them in store
+                            store.push((name.clone(), bytespart));
                         }
 
                         let byte_width = match bitmap_sheet.mode.as_str() {
@@ -382,14 +404,17 @@ fn main() -> Result<()> {
                             dl.push_str(
                                 format!(
                                     "{} & 0xff, (-{} & 0x1f) | ({} << 5), {} >> 8, {}, ",
-                                    name, palette, range_counter, name, x
+                                    name,
+                                    last - first,
+                                    palette,
+                                    name,
+                                    x
                                 )
                                 .as_str(),
                             );
                             nb_bytes += 4;
                         }
 
-                        store.push((name, fullbytes.clone()));
                         range_counter += 1;
                         first = last;
                     }
