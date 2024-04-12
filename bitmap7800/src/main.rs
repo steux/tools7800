@@ -111,6 +111,21 @@ static PALETTE: [u8; 768] = [
     0x3c, 0xdf, 0xbb, 0x4d, 0xf0, 0xcc, 0x5e, 0xff, 0xdd, 0x6f, 0xff, 0xee, 0x80, 0xff, 0xff, 0x91,
 ];
 
+fn find_color_in_palette(c: &(u8, u8, u8)) -> u8 {
+    let mut maxdist = 256 * 256 * 256;
+    let mut bestcolor = 0;
+    for color in 0..255 {
+        let dist = (PALETTE[color * 3] as i32 - c.0 as i32).abs()
+            + (PALETTE[color * 3 + 1] as i32 - c.1 as i32).abs()
+            + (PALETTE[color * 3 + 2] as i32 - c.2 as i32).abs();
+        if dist < maxdist {
+            maxdist = dist;
+            bestcolor = color as u8;
+        }
+    }
+    bestcolor
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
     let contents = fs::read_to_string(args.filename).expect("Unable to read input file");
@@ -167,50 +182,79 @@ fn main() -> Result<()> {
                                 || color[1] != background.1
                                 || color[2] != background.2)
                         {
+                            let mut found: Option<u8> = None;
                             for c in 0..maxcolors {
                                 if color[0] == colors[c].0
                                     && color[1] == colors[c].1
                                     && color[2] == colors[c].2
                                 {
-                                    match bitmap_sheet.mode.as_str() {
-                                        "320A" => {
-                                            cx = 1;
-                                            if let Some(p) = palette {
-                                                if c as u8 != p {
-                                                    return Err(anyhow!("Bitmap {}: Two pixels use a different palette in the same byte (x = {}, y = {}, color1 = {:?}, color2 = {:?})", bitmap.name, xp, yp, c, p - 1));
-                                                }
-                                            } else {
-                                                palette = Some(c as u8);
-                                            }
-                                        }
-                                        _ => {
-                                            return Err(anyhow!(
-                                                "Unimplemented for gfx {} mode",
-                                                bitmap_sheet.mode
-                                            ))
-                                        }
-                                    }
-                                    // TODO: Identify used palette, and check that it is consistent
-                                    // with previous pixels, and pixels on the previous line
-
-                                    // 320C bitmap_sheet.mode contraint check
-                                    if bitmap_sheet.mode == "320C" {
-                                        // Check next pixel, should be background or same color
-                                        if x & 1 == 0 {
-                                            let colorr = img.get_pixel(xp + 1, yp);
-                                            if !(colorr[3] == 0
-                                                || (colorr[0] == background.0
-                                                    && colorr[1] == background.1
-                                                    && colorr[2] == background.2))
-                                            {
-                                                // This is not background
-                                                if colorr != color {
-                                                    return Err(anyhow!("Bitmap {}: Two consecutive pixels have a different color in 320C bitmap_sheet.mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", bitmap.name, x, y, color, colorr));
-                                                }
-                                            }
-                                        }
-                                    }
+                                    found = Some(c as u8);
                                     break;
+                                }
+                            }
+
+                            let c = if let Some(c) = found {
+                                c
+                            } else {
+                                // Add a new color to the color table
+                                if maxcolors < 24 {
+                                    colors[maxcolors].0 = color[0];
+                                    colors[maxcolors].1 = color[1];
+                                    colors[maxcolors].2 = color[2];
+                                    maxcolors += 1;
+                                    (maxcolors - 1) as u8
+                                } else {
+                                    return Err(anyhow!("Bitmap {}: Too many colors", bitmap.name));
+                                }
+                            };
+
+                            match bitmap_sheet.mode.as_str() {
+                                "320A" => {
+                                    cx = 1;
+                                    if let Some(p) = palette {
+                                        if c as u8 != p {
+                                            return Err(anyhow!("Bitmap {}: Two pixels use a different palette in the same byte (x = {}, y = {}, color1 = {:?}, color2 = {:?})", bitmap.name, xp, yp, c, p - 1));
+                                        }
+                                    } else {
+                                        palette = Some(c as u8);
+                                    }
+                                }
+                                "160B" => {
+                                    cx = (c % 12) + 1; // 0 is background
+                                    let px = c / 12;
+                                    if let Some(p) = palette {
+                                        if px != p {
+                                            return Err(anyhow!("Bitmap {}: Two pixels use a different palette in the same byte (x = {}, y = {})", bitmap.name, xp, yp));
+                                        }
+                                    } else {
+                                        palette = Some(px as u8);
+                                    }
+                                }
+                                _ => {
+                                    return Err(anyhow!(
+                                        "Unimplemented for gfx {} mode",
+                                        bitmap_sheet.mode
+                                    ))
+                                }
+                            }
+                            // TODO: Identify used palette, and check that it is consistent
+                            // with previous pixels, and pixels on the previous line
+
+                            // 320C bitmap_sheet.mode contraint check
+                            if bitmap_sheet.mode == "320C" {
+                                // Check next pixel, should be background or same color
+                                if x & 1 == 0 {
+                                    let colorr = img.get_pixel(xp + 1, yp);
+                                    if !(colorr[3] == 0
+                                        || (colorr[0] == background.0
+                                            && colorr[1] == background.1
+                                            && colorr[2] == background.2))
+                                    {
+                                        // This is not background
+                                        if colorr != color {
+                                            return Err(anyhow!("Bitmap {}: Two consecutive pixels have a different color in 320C bitmap_sheet.mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", bitmap.name, x, y, color, colorr));
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -254,6 +298,10 @@ fn main() -> Result<()> {
                                     | (if c & 8 != 0 { 2 } else { 0 });
                                 current_bits += 1;
                                 if current_bits == 2 {
+                                    if let Some(p) = palette {
+                                        palettes[((x * pixel_width) / byte_width) as usize] = p;
+                                        palette = None;
+                                    }
                                     bytes.push(current_byte);
                                     current_byte = 0;
                                     current_bits = 0;
@@ -504,7 +552,33 @@ fn main() -> Result<()> {
             if let Some(b) = bitmap_sheet.bank {
                 print!("bank{b} ");
             }
-            println!("const char *{bitmapname}_data_ptrs[2] = {{{bitmapname}_data_ptrs_high, {bitmapname}_data_ptrs_low}};");
+            println!("const char *{bitmapname}_data_ptrs[2] = {{{bitmapname}_data_ptrs_high, {bitmapname}_data_ptrs_low}};\n");
+
+            // Output palettes
+            println!("inline void {bitmapname}_set_palette() {{");
+            let color = find_color_in_palette(&background);
+            println!("\t*BACKGRND = multisprite_color(0x{:02x});", color);
+            for i in 0..maxcolors {
+                let color = find_color_in_palette(&colors[i]);
+                let palette;
+                let index_in_palette;
+                match bitmap_sheet.mode.as_str() {
+                    "320A" => {
+                        palette = i;
+                        index_in_palette = 2;
+                    }
+                    "160B" => {
+                        palette = i / 3;
+                        index_in_palette = 1 + i % 3;
+                    }
+                    _ => unimplemented!(),
+                }
+                println!(
+                    "\t*P{palette}C{index_in_palette} = multisprite_color(0x{:02x});",
+                    color
+                );
+            }
+            println!("}}");
         }
     }
 
