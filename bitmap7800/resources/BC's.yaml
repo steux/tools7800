@@ -4,6 +4,8 @@ bitmap_sheets:
   - image: BC's.png 
     dl_height: 16
     mode: 160B
+    noholeydma: true
+    bank: 1
     bitmaps:
       - name: title_screen
         left: 0

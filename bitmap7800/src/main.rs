@@ -25,6 +25,7 @@ struct BitmapSheet {
     mode: String,
     dl_height: u8,
     bank: Option<u8>,
+    noholeydma: Option<bool>,
     bitmaps: Vec<Bitmap>,
 }
 
@@ -136,6 +137,10 @@ fn main() -> Result<()> {
     for bitmap_sheet in all_bitmaps.bitmap_sheets {
         let img = image::open(&bitmap_sheet.image)
             .expect(&format!("Can't open image {}", bitmap_sheet.image));
+
+        if let Some(b) = bitmap_sheet.bank {
+            println!("#ifndef BITMAP_TABLE_BANK\n#define BITMAP_TABLE_BANK bank{b}\n#endif");
+        }
 
         // Generate bitmaps data
         for bitmap in &bitmap_sheet.bitmaps {
@@ -452,6 +457,11 @@ fn main() -> Result<()> {
                             if let Some(b) = bitmap_sheet.bank {
                                 print!("bank{} ", b);
                             }
+                            if let Some(no) = bitmap_sheet.noholeydma {
+                                if no {
+                                    print!("noholeydma ");
+                                }
+                            }
                             print!(
                                 "reversed scattered({},{}) char {}[{}] = {{\n\t",
                                 bitmap_sheet.dl_height,
@@ -519,8 +529,8 @@ fn main() -> Result<()> {
                         first = last;
                     }
                 }
-                if let Some(b) = bitmap_sheet.bank {
-                    print!("bank{} ", b);
+                if bitmap_sheet.bank.is_some() {
+                    print!("BITMAP_TABLE_BANK ");
                 }
                 println!(
                     "const unsigned char {}_{}_dl[{}] = {{{}0, 0}};",
@@ -533,24 +543,24 @@ fn main() -> Result<()> {
             println!();
             let nb_dls = bitmap.height / bitmap_sheet.dl_height as u32;
             let bitmapname = &bitmap.name;
-            if let Some(b) = bitmap_sheet.bank {
-                print!("bank{b} ");
+            if bitmap_sheet.bank.is_some() {
+                print!("BITMAP_TABLE_BANK ");
             }
             print!("const char {bitmapname}_data_ptrs_high[{}] = {{", nb_dls);
             for y in 0..nb_dls - 1 {
                 print!("{bitmapname}_{y}_dl >> 8, ");
             }
             println!("{bitmapname}_{}_dl >> 8}};", nb_dls - 1);
-            if let Some(b) = bitmap_sheet.bank {
-                print!("bank{b} ");
+            if bitmap_sheet.bank.is_some() {
+                print!("BITMAP_TABLE_BANK ");
             }
             print!("const char {bitmapname}_data_ptrs_low[{}] = {{", nb_dls);
             for y in 0..nb_dls - 1 {
                 print!("{bitmapname}_{y}_dl & 0xff, ");
             }
             println!("{bitmapname}_{}_dl & 0xff}};", nb_dls - 1);
-            if let Some(b) = bitmap_sheet.bank {
-                print!("bank{b} ");
+            if bitmap_sheet.bank.is_some() {
+                print!("BITMAP_TABLE_BANK ");
             }
             println!("const char *{bitmapname}_data_ptrs[2] = {{{bitmapname}_data_ptrs_high, {bitmapname}_data_ptrs_low}};\n");
 
