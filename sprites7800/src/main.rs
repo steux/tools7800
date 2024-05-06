@@ -520,7 +520,14 @@ fn main() -> Result<()> {
                         i += 1;
                         }*/
                         // Store it in binary format
-                        let w = (w1 + w2 - 1) / 8 + 1;
+                        let wx = (w1 + w2 - 1) / 8 + 1;
+                        let w = if wx <= 2 {
+                            wx
+                        } else if wx <= 4 {
+                            4
+                        } else {
+                            8
+                        };
                         print!(
                             "\nconst char collision_{}_{}[{}] = {{",
                             &sp1.name,
