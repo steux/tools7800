@@ -178,7 +178,8 @@ fn main() -> Result<()> {
                                             {
                                                 // This is not background
                                                 if colorr != color {
-                                                    return Err(anyhow!("Sprite {}: Two consecutive pixels have a different color in 320C mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", sprite.name, x, y, color, colorr));
+                                                    // return Err(anyhow!("Sprite {}: Two consecutive pixels have a different color in 320C mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", sprite.name, x, y, color, colorr));
+                                                    println!("// Warning: Sprite {}: Two consecutive pixels have a different color in 320C mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", sprite.name, x, y, color, colorr);
                                                 }
                                             }
                                         }
