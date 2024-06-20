@@ -402,7 +402,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                 let defmode = tiles_sheet.mode.as_str();
                                 let mut tiles = HashMap::<u32, Tile>::new();
                                 let mut aliases = HashMap::<&str, u32>::new();
-                                let mut refs = HashMap::<u32, u32>::new(); // Mapping from tile number in the Atari tiles array to tile number in tiled array
+                                let mut refs = HashMap::<&str, u32>::new(); // Mapping from tile name in the Atari YAML file to tile number in tiled array
                                 let bytes_per_tile: usize = if tilewidth == 8 { 1 } else { 2 };
                                 for tile in &tiles_sheet.sprites {
                                     let gfx = if args.immediate {
@@ -424,7 +424,9 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                         "320D" => tilewidth / 8,
                                         _ => unreachable!(),
                                     };
-                                    aliases.insert(&tile.name.as_str(), index);
+                                    if tile.alias.is_none() {
+                                        aliases.insert(&tile.name.as_str(), index);
+                                    }
                                     let y = tile.top / tileheight;
                                     let x = tile.left / tilewidth;
                                     let ix = 1 + x + y * image_width / tilewidth;
@@ -432,8 +434,11 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                         + x
                                         + (img.height() / tileheight - 1 - y) * image_width
                                             / tilewidth;
-                                    refs.insert(index, ix);
-                                    refs.insert(index + 1, ixx);
+                                    // ixx is the tile number in tiled
+                                    // (reversed). index + 1 is an odd tile number that can be used
+                                    // by C code for vertical reflection
+                                    refs.insert(&tile.name, ix); // index is the tile number in
+                                                                 // generated atari 7800 tiles (in the order of yaml file), ix is the tile number in tiled
                                     let nbtilesx = tile.width / tilewidth;
                                     let nbtilesy = tile.height / tileheight;
                                     let palette_number = if let Some(p) = tile.palette_number {
@@ -442,7 +447,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                         0
                                     };
                                     let mut background = if let Some(b) = &tile.background {
-                                        aliases.get(b.as_str()).copied()
+                                        refs.get(b.as_str()).copied()
                                     } else {
                                         None
                                     };
@@ -513,8 +518,10 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                                     },
                                                 );
                                             }
-                                            index += tile_bytes;
-                                            idx += tile_bytes;
+                                            if tile.alias.is_none() {
+                                                index += tile_bytes;
+                                                idx += tile_bytes;
+                                            }
                                         }
                                     }
                                 }
@@ -558,10 +565,9 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                             deferred_tileset = Vec::<Vec<Tile>>::new();
                                             deferred_startx = Vec::<u32>::new();
                                         } else if let Some(t) = tiles.get(&cell) {
-                                            if let Some(btx) = t.background {
-                                                let r = refs.get(&btx).unwrap();
+                                            if let Some(r) = t.background {
                                                 // It's a tile with background info
-                                                if let Some(bt) = tiles.get(r) {
+                                                if let Some(bt) = tiles.get(&r) {
                                                     // Let's check the background tile
                                                     if let Some(tx) = background_tileset.last() {
                                                         // Is the cell compatible with the background tileset in construction ?
@@ -597,6 +603,14 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                                         // No, so start a new background tileset
                                                         background_tileset.push(bt.clone());
                                                         background_startx = x as u32;
+                                                        // And send the current foreground
+                                                        if !foreground_tileset.is_empty() {
+                                                            tilesets.push((
+                                                                foreground_startx,
+                                                                foreground_tileset,
+                                                            ));
+                                                            foreground_tileset = Vec::<Tile>::new();
+                                                        }
                                                     }
                                                     // Let's check the foreground tile
                                                     if let Some(tx) = foreground_tileset.last() {
