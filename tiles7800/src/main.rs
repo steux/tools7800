@@ -9,7 +9,7 @@ use std::str::FromStr;
 use xml_dom::level2::{Node, NodeType};
 
 //
-// TODO: For lonely and consecutive tiles, automatically switch to immediate mode
+// DONE: For lonely and consecutive tiles, automatically switch to immediate mode
 // TODO: immediate option in Sprite, to force immediate mode generation (to go beyond 128 tiles limit)
 // TODO: Pregenerate immediate mode sequences (max 15 tiles long -> 30 bytes)
 //
@@ -390,7 +390,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                         if array.len() == width * height {
                             if let Some(yaml_file) = args.yaml {
                                 let tileset_maxsize =
-                                    args.maxsize.unwrap_or(if tilewidth == 8 { 16 } else { 8 });
+                                    args.maxsize.unwrap_or(if tilewidth == 8 { 31 } else { 15 });
                                 let contents = fs::read_to_string(yaml_file)
                                     .expect("Unable to read input file");
                                 let t: AllSprites = serde_yaml::from_str(&contents)?;
@@ -406,6 +406,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                 let mut index = 0;
                                 let defmode = tiles_sheet.mode.as_str();
                                 let mut tiles = HashMap::<u32, Tile>::new();
+                                let mut tile_names_ex = HashMap::<u32, String>::new();
                                 let mut aliases = HashMap::<&str, u32>::new();
                                 let mut refs = HashMap::<&str, u32>::new(); // Mapping from tile name in the Atari YAML file to tile number in tiled array
                                 let bytes_per_tile: usize = if tilewidth == 8 { 1 } else { 2 };
@@ -472,6 +473,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                     } else {
                                         index
                                     };
+                                    let mut offset = 0;
                                     for j in 0..nbtilesy {
                                         for i in 0..nbtilesx {
                                             let tgfx = {
@@ -504,6 +506,10 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                                     gfx: tgfx.clone(),
                                                 },
                                             );
+                                            tile_names_ex.insert(
+                                                index,
+                                                format!("{} + {}", tile.name, offset),
+                                            );
                                             if let Some(Mirror::Vertical) = tiles_sheet.mirror {
                                                 let bg = background.map(|b| b + 1);
                                                 tiles.insert(
@@ -520,6 +526,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                             if tile.alias.is_none() {
                                                 index += tile_bytes;
                                                 idx += tile_bytes;
+                                                offset += tile_bytes;
                                             }
                                         }
                                     }
@@ -820,7 +827,18 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                         for s in &tilesets {
                                             let immediate = args.immediate;
                                             let mut tn = Vec::new();
+                                            let mut continuous_tileset = true;
+                                            let mut previous_index = None;
                                             for t in &s.1 {
+                                                let tile_bytes = match t.mode {
+                                                    "160A" => tilewidth / 8,
+                                                    "160B" => tilewidth / 4,
+                                                    "320A" => tilewidth / 8,
+                                                    "320B" => tilewidth / 4,
+                                                    "320C" => tilewidth / 4,
+                                                    "320D" => tilewidth / 8,
+                                                    _ => unreachable!(),
+                                                };
                                                 let nb = match t.mode {
                                                     "160A" | "320A" | "320D" => 1,
                                                     _ => 2,
@@ -828,80 +846,98 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                                 for i in 0..nb {
                                                     tn.push(t.index + (i * bytes_per_tile) as u32);
                                                 }
+                                                if let Some(pi) = previous_index {
+                                                    if pi + tile_bytes != t.index {
+                                                        continuous_tileset = false;
+                                                    }
+                                                }
+                                                previous_index = Some(t.index);
                                             }
-                                            // l is the number of bytes in the current tileset
-                                            let l = if immediate {
-                                                tn.len() * bytes_per_tile
+                                            if continuous_tileset {
+                                                w.push(tn.len() * bytes_per_tile);
+                                                imm.push(true);
+                                                tile_names.push(
+                                                    tile_names_ex
+                                                        .get(&s.1[0].index)
+                                                        .unwrap()
+                                                        .clone(),
+                                                );
                                             } else {
-                                                tn.len()
-                                            };
-                                            w.push(l);
-                                            imm.push(immediate);
+                                                // l is the number of bytes in the current tileset
+                                                let l = if immediate {
+                                                    tn.len() * bytes_per_tile
+                                                } else {
+                                                    tn.len()
+                                                };
+                                                w.push(l);
+                                                imm.push(immediate);
 
-                                            // 1st optimization : look in the tiles_store if it's already there
-                                            let mut found = None;
-                                            for c in &tiles_store {
-                                                if c.1.starts_with(&tn) {
-                                                    //if c.1 == tn {
-                                                    found = Some(c.0.clone());
-                                                    break;
+                                                // 1st optimization : look in the tiles_store if it's already there
+                                                let mut found = None;
+                                                for c in &tiles_store {
+                                                    if c.1.starts_with(&tn) {
+                                                        found = Some(c.0.clone());
+                                                        break;
+                                                    }
                                                 }
-                                            }
-                                            if let Some(name) = found {
-                                                tile_names.push(name);
-                                            } else {
-                                                let name = format!("{}_{}_{}", varname, y, c);
-                                                if let Some(b) = tiles_sheet.bank {
-                                                    print!("bank{b} ");
-                                                }
-                                                if immediate {
-                                                    print!(
+                                                if let Some(name) = found {
+                                                    tile_names.push(name);
+                                                } else {
+                                                    let name = format!("{}_{}_{}", varname, y, c);
+                                                    if let Some(b) = tiles_sheet.bank {
+                                                        print!("bank{b} ");
+                                                    }
+                                                    if immediate {
+                                                        print!(
                                                         "reversed scattered({},{}) char {}[{}] = {{\n\t",
                                                         tileheight,
                                                         l,
                                                         &name,
                                                         l * tileheight as usize
                                                     );
-                                                    let mut i = 0;
-                                                    for y in 0..tileheight as usize {
-                                                        for t in &s.1 {
-                                                            let nb = match t.mode {
-                                                                "160A" | "320A" | "320D" => 1,
-                                                                _ => 2,
-                                                            };
-                                                            for b in 0..(nb * bytes_per_tile) {
-                                                                print!(
-                                                                    "0x{:02x}",
-                                                                    t.gfx[y
-                                                                        * (nb * bytes_per_tile)
-                                                                        + b]
-                                                                );
-                                                                if i != l * tileheight as usize - 1
-                                                                {
-                                                                    if (i + 1) % 16 != 0 {
-                                                                        print!(", ");
-                                                                    } else {
-                                                                        print!(",\n\t");
+                                                        let mut i = 0;
+                                                        for y in 0..tileheight as usize {
+                                                            for t in &s.1 {
+                                                                let nb = match t.mode {
+                                                                    "160A" | "320A" | "320D" => 1,
+                                                                    _ => 2,
+                                                                };
+                                                                for b in 0..(nb * bytes_per_tile) {
+                                                                    print!(
+                                                                        "0x{:02x}",
+                                                                        t.gfx[y
+                                                                            * (nb
+                                                                                * bytes_per_tile)
+                                                                            + b]
+                                                                    );
+                                                                    if i != l * tileheight as usize
+                                                                        - 1
+                                                                    {
+                                                                        if (i + 1) % 16 != 0 {
+                                                                            print!(", ");
+                                                                        } else {
+                                                                            print!(",\n\t");
+                                                                        }
                                                                     }
+                                                                    i += 1;
                                                                 }
-                                                                i += 1;
                                                             }
                                                         }
+                                                        println!("}};");
+                                                    } else {
+                                                        print!(
+                                                            "const char {}[{}] = {{",
+                                                            &name,
+                                                            tn.len()
+                                                        );
+                                                        for i in 0..tn.len() - 1 {
+                                                            print!("{}, ", tn[i]);
+                                                        }
+                                                        println!("{}}};", tn[tn.len() - 1]);
                                                     }
-                                                    println!("}};");
-                                                } else {
-                                                    print!(
-                                                        "const char {}[{}] = {{",
-                                                        &name,
-                                                        tn.len()
-                                                    );
-                                                    for i in 0..tn.len() - 1 {
-                                                        print!("{}, ", tn[i]);
-                                                    }
-                                                    println!("{}}};", tn[tn.len() - 1]);
+                                                    tiles_store.push((name.clone(), tn));
+                                                    tile_names.push(name);
                                                 }
-                                                tiles_store.push((name.clone(), tn));
-                                                tile_names.push(name);
                                             }
                                             c += 1;
                                         }

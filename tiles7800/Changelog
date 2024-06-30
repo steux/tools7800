@@ -1,6 +1,11 @@
+v0.4.0 (30/06/2024) :
+  - For lonely and consecutive tiles, automatically switch to immediate mode
+
 v0.3.7 (06/28/2024) :
 	- Refactored code to better mix immediate & tiled modes
 	- Better tileset optimization
+	- Changed default maxsize (to 31 and 15 depending on tile widthsize (to 31
+	and 15 depending on tile width. Assumes 160A/320A modes)
 
 v0.3.6 (06/20/2024) :
 	- Solved some bugs with background & aliases 
