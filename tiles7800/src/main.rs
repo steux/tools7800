@@ -63,7 +63,7 @@ struct Palette {
 #[derive(Deserialize)]
 struct Sequence {
     sequence: Vec<String>,
-    repeat: usize,
+    repeat: Option<usize>,
 }
 
 #[derive(Deserialize)]
@@ -411,8 +411,8 @@ fn main() -> Result<()> {
                                 let defmode = tiles_sheet.mode.as_str();
                                 let mut tiles = HashMap::<u32, Tile>::new();
                                 let mut tile_names_ex = HashMap::<u32, String>::new();
-                                let mut aliases = HashMap::<&str, u32>::new();
-                                let mut refs = HashMap::<&str, u32>::new(); // Mapping from tile name in the Atari YAML file to tile number in tiled array
+                                let mut aliases = HashMap::<String, u32>::new();
+                                let mut refs = HashMap::<String, u32>::new(); // Mapping from tile name in the Atari YAML file to tile number in tiled array
                                 let bytes_per_tile: usize = if tilewidth == 8 { 1 } else { 2 };
                                 for tile in &tiles_sheet.sprites {
                                     let gfx = sprite_gfx(&img, &t, tiles_sheet, tile)?;
@@ -431,7 +431,7 @@ fn main() -> Result<()> {
                                         _ => unreachable!(),
                                     };
                                     if tile.alias.is_none() {
-                                        aliases.insert(&tile.name, index);
+                                        aliases.insert(tile.name.clone(), index);
                                     }
                                     let y = tile.top / tileheight;
                                     let x = tile.left / tilewidth;
@@ -443,8 +443,8 @@ fn main() -> Result<()> {
                                     // ixx is the tile number in tiled
                                     // (reversed). index + 1 is an odd tile number that can be used
                                     // by C code for vertical reflection
-                                    refs.insert(&tile.name, ix); // index is the tile number in
-                                                                 // generated atari 7800 tiles (in the order of yaml file), ix is the tile number in tiled
+                                    refs.insert(tile.name.clone(), ix); // index is the tile number in
+                                                                        // generated atari 7800 tiles (in the order of yaml file), ix is the tile number in tiled
                                     let nbtilesx = tile.width / tilewidth;
                                     let nbtilesy = tile.height / tileheight;
                                     let palette_number = if let Some(p) = tile.palette_number {
@@ -453,7 +453,7 @@ fn main() -> Result<()> {
                                         0
                                     };
                                     let mut background = if let Some(b) = &tile.background {
-                                        refs.get(b.as_str()).copied()
+                                        refs.get(b).copied()
                                     } else {
                                         None
                                     };
@@ -511,6 +511,16 @@ fn main() -> Result<()> {
                                                 index,
                                                 format!("{} + {}", tile.name, offset),
                                             );
+                                            if tile.alias.is_none() {
+                                                aliases.insert(
+                                                    format!("{} + {}", tile.name, offset),
+                                                    index,
+                                                );
+                                                refs.insert(
+                                                    format!("{} + {}", tile.name, offset),
+                                                    ix + i + j * image_width / tilewidth,
+                                                );
+                                            }
                                             if let Some(Mirror::Vertical) = tiles_sheet.mirror {
                                                 let bg = background.map(|b| b + 1);
                                                 tiles.insert(
@@ -545,7 +555,20 @@ fn main() -> Result<()> {
                                         let mut tn = Vec::new();
                                         let mut tileset = Vec::new();
                                         for s in &sequence.sequence {
-                                            let ix = refs.get(s.as_str());
+                                            let ix;
+                                            let idx = s.parse::<u32>();
+                                            if let Ok(index) = idx {
+                                                let tile_name = tile_names_ex.get(&index);
+                                                if tile_name.is_none() {
+                                                    return Err(anyhow!(
+                                                        "Unknown tile number {}",
+                                                        index
+                                                    ));
+                                                }
+                                                ix = refs.get(tile_name.unwrap());
+                                            } else {
+                                                ix = refs.get(s);
+                                            }
                                             if ix.is_none() {
                                                 return Err(anyhow!("Unknown tile name {}", s));
                                             }
@@ -562,11 +585,13 @@ fn main() -> Result<()> {
 
                                         let mut seq = Vec::<&Tile>::new();
                                         let mut tnx = Vec::new();
-                                        for _ in 0..sequence.repeat {
+                                        for _ in 0..sequence.repeat.unwrap_or(1) {
                                             seq.extend(tileset.iter());
                                             tnx.extend(tn.iter());
                                         }
-                                        let l = tn.len() * bytes_per_tile * sequence.repeat;
+                                        let l = tn.len()
+                                            * bytes_per_tile
+                                            * sequence.repeat.unwrap_or(1);
                                         if let Some(b) = tiles_sheet.bank {
                                             print!("bank{b} ");
                                         }
@@ -587,7 +612,7 @@ fn main() -> Result<()> {
                                                 for b in 0..(nb * bytes_per_tile) {
                                                     print!(
                                                         "0x{:02x}",
-                                                        0xbb //t.gfx[y * (nb * bytes_per_tile) + b]
+                                                        t.gfx[y * (nb * bytes_per_tile) + b]
                                                     );
                                                     if i != l * tileheight as usize - 1 {
                                                         if (i + 1) % 16 != 0 {
