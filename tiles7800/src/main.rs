@@ -3,7 +3,6 @@ use clap::Parser;
 use image::{GenericImageView, Rgba};
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::error;
 use std::fs;
 use std::str::FromStr;
 use xml_dom::level2::{Node, NodeType};
@@ -11,7 +10,7 @@ use xml_dom::level2::{Node, NodeType};
 //
 // DONE: For lonely and consecutive tiles, automatically switch to immediate mode
 // TODO: immediate option in Sprite, to force immediate mode generation (to go beyond 128 tiles limit)
-// TODO: Pregenerate immediate mode sequences (max 15 tiles long -> 30 bytes)
+// DONE: Pregenerate immediate mode sequences (max 15 tiles long -> 30 bytes)
 //
 /// Atari 7800 tool that generates C code for tiles map generated using tiled editor (tmx files)
 #[derive(Parser, Debug)]
@@ -36,7 +35,6 @@ struct Args {
     immediate: bool,
 }
 
-#[allow(unused)]
 #[derive(Deserialize)]
 struct AllSprites {
     #[serde(default)]
@@ -52,14 +50,20 @@ struct SpriteSheet {
     bank: Option<u8>,
     #[serde(default)]
     mirror: Option<Mirror>,
+    sequences: Option<Vec<Sequence>>,
     sprites: Vec<Sprite>,
 }
 
-#[allow(unused)]
 #[derive(Deserialize)]
 struct Palette {
     name: String,
     colors: Vec<(u8, u8, u8)>,
+}
+
+#[derive(Deserialize)]
+struct Sequence {
+    sequence: Vec<String>,
+    repeat: usize,
 }
 
 #[derive(Deserialize)]
@@ -331,7 +335,7 @@ fn sprite_gfx(
     Ok(bytes)
 }
 
-fn main() -> Result<(), Box<dyn error::Error>> {
+fn main() -> Result<()> {
     let mut width = 0;
     let mut height = 0;
     let mut tilewidth: u32 = 8;
@@ -427,7 +431,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                         _ => unreachable!(),
                                     };
                                     if tile.alias.is_none() {
-                                        aliases.insert(&tile.name.as_str(), index);
+                                        aliases.insert(&tile.name, index);
                                     }
                                     let y = tile.top / tileheight;
                                     let x = tile.left / tilewidth;
@@ -465,10 +469,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                                 *i
                                             }
                                         } else {
-                                            return Err(Box::new(std::io::Error::new(
-                                                std::io::ErrorKind::Other,
-                                                "Bad alias",
-                                            )));
+                                            return Err(anyhow!("Bad alias {}", alias));
                                         }
                                     } else {
                                         index
@@ -535,7 +536,75 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
                                 // Generate the C code for the the sparse tiles
                                 // to be used with multisprite.h or sparse_tiling.h header
-                                let mut tiles_store = Vec::<(String, Vec<u32>)>::new();
+                                let mut tiles_store = Vec::<(String, Vec<u32>, bool)>::new();
+
+                                // Process sequences & pregenerate immediate data
+                                if let Some(sequences) = &tiles_sheet.sequences {
+                                    for (i, sequence) in sequences.iter().enumerate() {
+                                        let name = format!("{}_sequence_{}", varname, i);
+                                        let mut tn = Vec::new();
+                                        let mut tileset = Vec::new();
+                                        for s in &sequence.sequence {
+                                            let ix = refs.get(s.as_str());
+                                            if ix.is_none() {
+                                                return Err(anyhow!("Unknown tile name {}", s));
+                                            }
+                                            let tile = tiles.get(ix.unwrap()).unwrap();
+                                            let nb = match tile.mode {
+                                                "160A" | "320A" | "320D" => 1,
+                                                _ => 2,
+                                            };
+                                            for i in 0..nb {
+                                                tn.push(tile.index + (i * bytes_per_tile) as u32);
+                                            }
+                                            tileset.push(tile);
+                                        }
+
+                                        let mut seq = Vec::<&Tile>::new();
+                                        let mut tnx = Vec::new();
+                                        for _ in 0..sequence.repeat {
+                                            seq.extend(tileset.iter());
+                                            tnx.extend(tn.iter());
+                                        }
+                                        let l = tn.len() * bytes_per_tile * sequence.repeat;
+                                        if let Some(b) = tiles_sheet.bank {
+                                            print!("bank{b} ");
+                                        }
+                                        print!(
+                                            "reversed scattered({},{}) char {}[{}] = {{\n\t",
+                                            tileheight,
+                                            l,
+                                            &name,
+                                            l * tileheight as usize
+                                        );
+                                        let mut i = 0;
+                                        for y in 0..tileheight as usize {
+                                            for t in &seq {
+                                                let nb = match t.mode {
+                                                    "160A" | "320A" | "320D" => 1,
+                                                    _ => 2,
+                                                };
+                                                for b in 0..(nb * bytes_per_tile) {
+                                                    print!(
+                                                        "0x{:02x}",
+                                                        t.gfx[y * (nb * bytes_per_tile) + b]
+                                                    );
+                                                    if i != l * tileheight as usize - 1 {
+                                                        if (i + 1) % 16 != 0 {
+                                                            print!(", ");
+                                                        } else {
+                                                            print!(",\n\t");
+                                                        }
+                                                    }
+                                                    i += 1;
+                                                }
+                                            }
+                                        }
+                                        println!("}};");
+                                        tiles_store.push((name, tnx, true));
+                                    }
+                                }
+
                                 let mut tilesmap_store = Vec::<(String, String)>::new();
                                 let mut tilesmap = Vec::<String>::new();
 
@@ -818,6 +887,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                             deferred_tileset[i].clone(),
                                         ));
                                     }
+
                                     // Write this line of data
                                     {
                                         let mut c = 0;
@@ -825,7 +895,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                         let mut tile_names = Vec::new();
                                         let mut imm = Vec::new();
                                         for s in &tilesets {
-                                            let immediate = args.immediate;
+                                            let mut immediate = args.immediate;
                                             let mut tn = Vec::new();
                                             let mut continuous_tileset = true;
                                             let mut previous_index = None;
@@ -863,6 +933,16 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                                         .clone(),
                                                 );
                                             } else {
+                                                // 1st optimization : look in the tiles_store if it's already there
+                                                let mut found = None;
+                                                for c in &tiles_store {
+                                                    if c.1.starts_with(&tn) {
+                                                        found = Some(c.0.clone());
+                                                        immediate = c.2;
+                                                        break;
+                                                    }
+                                                }
+
                                                 // l is the number of bytes in the current tileset
                                                 let l = if immediate {
                                                     tn.len() * bytes_per_tile
@@ -872,14 +952,6 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                                 w.push(l);
                                                 imm.push(immediate);
 
-                                                // 1st optimization : look in the tiles_store if it's already there
-                                                let mut found = None;
-                                                for c in &tiles_store {
-                                                    if c.1.starts_with(&tn) {
-                                                        found = Some(c.0.clone());
-                                                        break;
-                                                    }
-                                                }
                                                 if let Some(name) = found {
                                                     tile_names.push(name);
                                                 } else {
@@ -935,7 +1007,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                                         }
                                                         println!("{}}};", tn[tn.len() - 1]);
                                                     }
-                                                    tiles_store.push((name.clone(), tn));
+                                                    tiles_store.push((name.clone(), tn, false));
                                                     tile_names.push(name);
                                                 }
                                             }
@@ -1043,19 +1115,12 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                                 }
                             }
                             return Ok(());
-                        } else {
-                            return Err(Box::new(std::io::Error::new(
-                                std::io::ErrorKind::Other,
-                                "Bad data format. Unexpected table size.",
-                            )));
                         }
+                        return Err(anyhow!("Bad data format. Unexpected table size."));
                     }
                 }
             }
         }
     }
-    Err(Box::new(std::io::Error::new(
-        std::io::ErrorKind::Other,
-        "Unexpected data provided.",
-    )))
+    Err(anyhow!("Unexpected data provided."))
 }
