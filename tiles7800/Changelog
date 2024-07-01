@@ -1,6 +1,8 @@
 v0.4.0 (30/06/2024) :
   - For lonely and consecutive tiles, automatically switch to immediate mode
 	- Introduced pregeneration of immediate sequences
+	- Better tileset optimizations (look for a tileet within existing stored
+	tilesets)
 
 v0.3.7 (06/28/2024) :
 	- Refactored code to better mix immediate & tiled modes

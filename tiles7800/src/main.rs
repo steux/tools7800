@@ -587,7 +587,7 @@ fn main() -> Result<()> {
                                                 for b in 0..(nb * bytes_per_tile) {
                                                     print!(
                                                         "0x{:02x}",
-                                                        t.gfx[y * (nb * bytes_per_tile) + b]
+                                                        0xbb //t.gfx[y * (nb * bytes_per_tile) + b]
                                                     );
                                                     if i != l * tileheight as usize - 1 {
                                                         if (i + 1) % 16 != 0 {
@@ -936,11 +936,33 @@ fn main() -> Result<()> {
                                                 // 1st optimization : look in the tiles_store if it's already there
                                                 let mut found = None;
                                                 for c in &tiles_store {
-                                                    if c.1.starts_with(&tn) {
-                                                        found = Some(c.0.clone());
+                                                    // Look for tn in c.1
+                                                    if let Some(p) =
+                                                        c.1.windows(tn.len()).position(|w| tn == w)
+                                                    {
                                                         immediate = c.2;
+                                                        found = if p == 0 {
+                                                            Some(c.0.clone())
+                                                        } else {
+                                                            let offset = if immediate {
+                                                                p * bytes_per_tile
+                                                            } else {
+                                                                p
+                                                            };
+                                                            Some(format!(
+                                                                "{} + {}",
+                                                                c.0.clone(),
+                                                                offset
+                                                            ))
+                                                        };
                                                         break;
-                                                    }
+                                                    } /*
+                                                      if c.1.starts_with(&tn) {
+                                                          found = Some(c.0.clone());
+                                                          immediate = c.2;
+                                                          break;
+                                                      }
+                                                      */
                                                 }
 
                                                 // l is the number of bytes in the current tileset
