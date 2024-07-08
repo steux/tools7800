@@ -9,8 +9,8 @@ use xml_dom::level2::{Node, NodeType};
 
 //
 // DONE: For lonely and consecutive tiles, automatically switch to immediate mode
-// TODO: immediate option in Sprite, to force immediate mode generation (to go beyond 128 tiles limit)
 // DONE: Pregenerate immediate mode sequences (max 15 tiles long -> 30 bytes)
+// TODO: immediate option in Sprite, to force immediate mode generation (to go beyond 128 tiles limit)
 //
 /// Atari 7800 tool that generates C code for tiles map generated using tiled editor (tmx files)
 #[derive(Parser, Debug)]
@@ -152,7 +152,7 @@ fn sprite_gfx(
     if maxcolors != 1 {
         if let Some(palettes) = &all_sprites.palettes {
             if let Some(pname) = &sprite.palette {
-                let px = palettes.into_iter().find(|x| &x.name == pname);
+                let px = palettes.iter().find(|x| &x.name == pname);
                 if let Some(p) = px {
                     let mut i = 0;
                     for c in &p.colors {
@@ -362,8 +362,22 @@ fn main() -> Result<()> {
             }
         }
     }
+    let mut imagewidth = None;
     for n in &root.child_nodes() {
-        if n.node_type() == NodeType::Element && n.local_name() == "layer" {
+        if n.node_type() == NodeType::Element && n.local_name() == "tileset" {
+            for nx in &n.child_nodes() {
+                if nx.node_type() == NodeType::Element && nx.local_name() == "image" {
+                    for a in &nx.attributes() {
+                        if a.0.local_name() == "width" {
+                            let h = a.1.first_child().unwrap().node_value();
+                            if let Some(s) = h {
+                                imagewidth = s.parse::<u32>().ok();
+                            }
+                        }
+                    }
+                }
+            }
+        } else if n.node_type() == NodeType::Element && n.local_name() == "layer" {
             for a in &n.attributes() {
                 if a.0.local_name() == "width" {
                     let w = a.1.first_child().unwrap().node_value();
@@ -406,7 +420,11 @@ fn main() -> Result<()> {
                                 let tiles_sheet = &t.sprite_sheets[0];
                                 let img = image::open(&tiles_sheet.image)
                                     .expect(&format!("Can't open image {}", tiles_sheet.image));
-                                let image_width = img.width();
+                                let image_width = if let Some(iw) = imagewidth {
+                                    iw
+                                } else {
+                                    img.width()
+                                };
                                 let mut index = 0;
                                 let defmode = tiles_sheet.mode.as_str();
                                 let mut tiles = HashMap::<u32, Tile>::new();
@@ -536,9 +554,9 @@ fn main() -> Result<()> {
                                             }
                                             if tile.alias.is_none() {
                                                 index += tile_bytes;
-                                                idx += tile_bytes;
-                                                offset += tile_bytes;
                                             }
+                                            idx += tile_bytes;
+                                            offset += tile_bytes;
                                         }
                                     }
                                 }

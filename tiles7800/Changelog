@@ -4,6 +4,8 @@ v0.4.0 (30/06/2024) :
 	- Better tileset optimizations (look for a tileet within existing stored
 	tilesets)
 	- Accepts tile numbers as sequences
+	- Aliases work group by group, not just tile by tile
+	- Fixed a bug with tiled image width not matching the actual image width
 
 v0.3.7 (06/28/2024) :
 	- Refactored code to better mix immediate & tiled modes
