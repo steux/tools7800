@@ -55,6 +55,7 @@ struct Sprite {
     alias: Option<String>,
     #[serde(default)]
     background: Option<String>,
+    bank: Option<u8>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -319,8 +320,16 @@ fn main() -> Result<()> {
                         };
                     }
                 }
+
                 // Whoaw. We do have our pixels vector. Let's output it
-                if let Some(b) = sprite_sheet.bank {
+                let bank = if sprite.bank.is_some() {
+                    sprite.bank
+                } else if sprite_sheet.bank.is_some() {
+                    sprite_sheet.bank
+                } else {
+                    None
+                };
+                if let Some(b) = bank {
                     print!("bank{} ", b);
                 }
                 let default_height = if let Some(h) = sprite_sheet.holeydma {
@@ -397,7 +406,7 @@ fn main() -> Result<()> {
                         if sprite.holeydma && (default_height == 8 || default_height == 16) {
                             print!("holeydma ");
                         }
-                        if let Some(b) = sprite_sheet.bank {
+                        if let Some(b) = bank {
                             print!("bank{} ", b);
                         }
                         print!(
