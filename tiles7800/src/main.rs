@@ -64,6 +64,10 @@ struct Palette {
 struct Sequence {
     sequence: Vec<String>,
     repeat: Option<usize>,
+    holeydma: Option<bool>,
+    bank: Option<u8>,
+    generate: Option<bool>,
+    name: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -569,7 +573,11 @@ fn main() -> Result<()> {
                                 // Process sequences & pregenerate immediate data
                                 if let Some(sequences) = &tiles_sheet.sequences {
                                     for (i, sequence) in sequences.iter().enumerate() {
-                                        let name = format!("{}_sequence_{}", varname, i);
+                                        let name = if let Some(n) = &sequence.name {
+                                            n.clone()
+                                        } else {
+                                            format!("{}_sequence_{}", varname, i)
+                                        };
                                         let mut tn = Vec::new();
                                         let mut tileset = Vec::new();
                                         for s in &sequence.sequence {
@@ -607,43 +615,58 @@ fn main() -> Result<()> {
                                             seq.extend(tileset.iter());
                                             tnx.extend(tn.iter());
                                         }
-                                        let l = tn.len()
-                                            * bytes_per_tile
-                                            * sequence.repeat.unwrap_or(1);
-                                        if let Some(b) = tiles_sheet.bank {
-                                            print!("bank{b} ");
-                                        }
-                                        print!(
-                                            "reversed scattered({},{}) char {}[{}] = {{\n\t",
-                                            tileheight,
-                                            l,
-                                            &name,
-                                            l * tileheight as usize
-                                        );
-                                        let mut i = 0;
-                                        for y in 0..tileheight as usize {
-                                            for t in &seq {
-                                                let nb = match t.mode {
-                                                    "160A" | "320A" | "320D" => 1,
-                                                    _ => 2,
-                                                };
-                                                for b in 0..(nb * bytes_per_tile) {
-                                                    print!(
-                                                        "0x{:02x}",
-                                                        t.gfx[y * (nb * bytes_per_tile) + b]
-                                                    );
-                                                    if i != l * tileheight as usize - 1 {
-                                                        if (i + 1) % 16 != 0 {
-                                                            print!(", ");
-                                                        } else {
-                                                            print!(",\n\t");
-                                                        }
-                                                    }
-                                                    i += 1;
-                                                }
+                                        let mut generate = true;
+                                        if let Some(g) = sequence.generate {
+                                            if !g {
+                                                generate = false;
                                             }
                                         }
-                                        println!("}};");
+                                        if generate {
+                                            let l = tn.len()
+                                                * bytes_per_tile
+                                                * sequence.repeat.unwrap_or(1);
+                                            if let Some(b) = sequence.bank {
+                                                print!("bank{b} ");
+                                            } else if let Some(b) = tiles_sheet.bank {
+                                                print!("bank{b} ");
+                                            }
+                                            if let Some(h) = sequence.holeydma {
+                                                if h {
+                                                    print!("holeydma ");
+                                                }
+                                            }
+                                            print!(
+                                                "reversed scattered({},{}) char {}[{}] = {{\n\t",
+                                                tileheight,
+                                                l,
+                                                &name,
+                                                l * tileheight as usize
+                                            );
+                                            let mut i = 0;
+                                            for y in 0..tileheight as usize {
+                                                for t in &seq {
+                                                    let nb = match t.mode {
+                                                        "160A" | "320A" | "320D" => 1,
+                                                        _ => 2,
+                                                    };
+                                                    for b in 0..(nb * bytes_per_tile) {
+                                                        print!(
+                                                            "0x{:02x}",
+                                                            t.gfx[y * (nb * bytes_per_tile) + b]
+                                                        );
+                                                        if i != l * tileheight as usize - 1 {
+                                                            if (i + 1) % 16 != 0 {
+                                                                print!(", ");
+                                                            } else {
+                                                                print!(",\n\t");
+                                                            }
+                                                        }
+                                                        i += 1;
+                                                    }
+                                                }
+                                            }
+                                            println!("}};");
+                                        }
                                         tiles_store.push((name, tnx, true));
                                     }
                                 }

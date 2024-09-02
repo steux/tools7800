@@ -1,4 +1,5 @@
 v0.4.0 (30/06/2024) :
+	- Added name, generate, bank and holeydma for sequences (for easier bankswitching management)
   - For lonely and consecutive tiles, automatically switch to immediate mode
 	- Introduced pregeneration of immediate sequences
 	- Better tileset optimizations (look for a tileet within existing stored
