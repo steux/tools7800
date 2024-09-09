@@ -1,5 +1,6 @@
 v0.4.3 (07/15/2024) :
-   - Added bank sprite option 
+   - Added bank sprite option
+	 - Added an error when wrong specified palette
 
 v0.4.2 (05/26/2024) :
    - 320C mode: error to warning

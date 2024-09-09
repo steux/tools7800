@@ -137,6 +137,8 @@ fn main() -> Result<()> {
                                     colors[i] = *c;
                                     i += 1;
                                 }
+                            } else {
+                                return Err(anyhow!("Unknown palette {}", pname));
                             }
                         }
                     }
