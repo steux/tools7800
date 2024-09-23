@@ -145,9 +145,9 @@ fn main() -> Result<()> {
                 }
 
                 let mut bytes = Vec::<u8>::new();
+                let mut current_byte: u8 = 0;
+                let mut current_bits: u8 = 0;
                 for y in 0..sprite.height {
-                    let mut current_byte: u8 = 0;
-                    let mut current_bits: u8 = 0;
                     for x in 0..sprite.width / pixel_width {
                         let xp = sprite.left + x * pixel_width;
                         let yp = sprite.top + y;
@@ -321,6 +321,43 @@ fn main() -> Result<()> {
                             _ => unreachable!(),
                         };
                     }
+                    // If the bytes are not complete, fill with void
+                    while current_bits != 0 {
+                        match mode {
+                            "160A" | "320A" | "320D" => {
+                                current_bits += pixel_bits;
+                                if current_bits == 8 {
+                                    bytes.push(current_byte);
+                                    current_bits = 0;
+                                } else {
+                                    current_byte <<= pixel_bits;
+                                };
+                            }
+                            "160B" => {
+                                current_bits += 1;
+                                if current_bits == 2 {
+                                    bytes.push(current_byte);
+                                    current_bits = 0;
+                                } else {
+                                    current_byte <<= 2;
+                                };
+                            }
+                            "320B" => {
+                                current_bits += 1;
+                                if current_bits == 4 {
+                                    bytes.push(current_byte);
+                                    current_bits = 0;
+                                } else {
+                                    current_byte <<= 1;
+                                };
+                            }
+                            "320C" => {
+                                bytes.push(current_byte);
+                                current_bits = 0;
+                            }
+                            _ => unreachable!(),
+                        };
+                    }
                 }
 
                 // Whoaw. We do have our pixels vector. Let's output it
@@ -346,13 +383,13 @@ fn main() -> Result<()> {
                 if sprite.holeydma && (default_height == 8 || default_height == 16) {
                     print!("holeydma ");
                 }
-                if default_height == 16 && sprite.height == 8 {
+                if default_height == 16 && sprite.height < 16 {
                     // This is a special case: small sprite for 16 holey DMA (a bullet for instance)
                     print!(
                         "reversed scattered(16,{}) char {}[{}] = {{\n\t",
-                        bytes.len() / 8,
+                        bytes.len() / sprite.height as usize,
                         sprite.name,
-                        bytes.len() * 2
+                        bytes.len() / sprite.height as usize * default_height as usize
                     );
                     let mut c = 1;
                     for i in 0..bytes.len() {
@@ -364,7 +401,9 @@ fn main() -> Result<()> {
                         }
                         c += 1;
                     }
-                    for _ in 0..bytes.len() - 1 {
+                    for _ in bytes.len()
+                        ..bytes.len() / sprite.height as usize * default_height as usize - 1
+                    {
                         print!("0x00");
                         if c % 16 != 0 {
                             print!(", ");

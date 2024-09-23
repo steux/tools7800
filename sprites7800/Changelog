@@ -1,6 +1,8 @@
 v0.4.3 (07/15/2024) :
    - Added bank sprite option
 	 - Added an error when wrong specified palette
+	 - Accepts width not multiple of full bytes
+	 - Fixed issue with small height sprites
 
 v0.4.2 (05/26/2024) :
    - 320C mode: error to warning
