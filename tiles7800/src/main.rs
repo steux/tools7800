@@ -68,6 +68,7 @@ struct Sequence {
     bank: Option<u8>,
     generate: Option<bool>,
     name: Option<String>,
+    prefix: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -611,6 +612,37 @@ fn main() -> Result<()> {
 
                                         let mut seq = Vec::<&Tile>::new();
                                         let mut tnx = Vec::new();
+                                        if let Some(prefix) = &sequence.prefix {
+                                            let ix;
+                                            let idx = prefix.parse::<u32>();
+                                            if let Ok(index) = idx {
+                                                let tile_name = tile_names_ex.get(&index);
+                                                if tile_name.is_none() {
+                                                    return Err(anyhow!(
+                                                        "Unknown tile number {}",
+                                                        index
+                                                    ));
+                                                }
+                                                ix = refs.get(tile_name.unwrap());
+                                            } else {
+                                                ix = refs.get(prefix);
+                                            }
+                                            if ix.is_none() {
+                                                return Err(anyhow!(
+                                                    "Unknown tile name {}",
+                                                    prefix
+                                                ));
+                                            }
+                                            let tile = tiles.get(ix.unwrap()).unwrap();
+                                            let nb = match tile.mode {
+                                                "160A" | "320A" | "320D" => 1,
+                                                _ => 2,
+                                            };
+                                            for i in 0..nb {
+                                                tnx.push(tile.index + (i * bytes_per_tile) as u32);
+                                            }
+                                            seq.push(tile);
+                                        }
                                         for _ in 0..sequence.repeat.unwrap_or(1) {
                                             seq.extend(tileset.iter());
                                             tnx.extend(tn.iter());
@@ -622,9 +654,7 @@ fn main() -> Result<()> {
                                             }
                                         }
                                         if generate {
-                                            let l = tn.len()
-                                                * bytes_per_tile
-                                                * sequence.repeat.unwrap_or(1);
+                                            let l = tnx.len() * bytes_per_tile;
                                             if let Some(b) = sequence.bank {
                                                 print!("bank{b} ");
                                             } else if let Some(b) = tiles_sheet.bank {
