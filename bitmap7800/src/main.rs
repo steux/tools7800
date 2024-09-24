@@ -15,7 +15,7 @@ struct Args {
 #[derive(Debug, Deserialize)]
 struct AllBitmaps {
     background: Option<(u8, u8, u8)>,
-    palettes: Vec<Palette>,
+    palettes: Option<Vec<Palette>>,
     bitmap_sheets: Vec<BitmapSheet>,
 }
 
@@ -135,6 +135,27 @@ fn main() -> Result<()> {
     let mut store = Vec::<(String, Vec<Vec<u8>>)>::new();
 
     for bitmap_sheet in all_bitmaps.bitmap_sheets {
+        let byte_width = match bitmap_sheet.mode.as_str() {
+            "160A" | "320A" | "320D" => 8,
+            _ => 4,
+        };
+        let maxmaxcolors = match bitmap_sheet.mode.as_str() {
+            "160A" | "160B" => 24,
+            "320B" => 6,
+            "320A" | "320C" => 8,
+            _ => unimplemented!(),
+        };
+
+        let pixel_width = match bitmap_sheet.mode.as_str() {
+            "320A" | "320B" | "320C" | "320D" => 1,
+            _ => 2,
+        };
+        let pixel_bits = match bitmap_sheet.mode.as_str() {
+            "320A" | "320D" => 1,
+            "160B" => 4,
+            _ => 2,
+        };
+
         let img = image::open(&bitmap_sheet.image)
             .expect(&format!("Can't open image {}", bitmap_sheet.image));
 
@@ -144,32 +165,20 @@ fn main() -> Result<()> {
 
         // Generate bitmaps data
         for bitmap in &bitmap_sheet.bitmaps {
-            let pixel_width = match bitmap_sheet.mode.as_str() {
-                "320A" | "320B" | "320C" | "320D" => 1,
-                _ => 2,
-            };
-            let pixel_bits = match bitmap_sheet.mode.as_str() {
-                "320A" | "320D" => 1,
-                "160B" => 4,
-                _ => 2,
-            };
-
             let mut colors = [(0u8, 0u8, 0u8); 24];
             let mut maxcolors = 0;
-            for p in &all_bitmaps.palettes {
-                for c in &p.colors {
-                    colors[maxcolors] = *c;
-                    maxcolors += 1;
+            if let Some(palettes) = &all_bitmaps.palettes {
+                for p in palettes {
+                    for c in &p.colors {
+                        colors[maxcolors] = *c;
+                        maxcolors += 1;
+                    }
                 }
             }
             let background = all_bitmaps.background.unwrap_or((0, 0, 0));
 
             for yy in 0..bitmap.height / bitmap_sheet.dl_height as u32 {
                 let mut fullbytes = Vec::<Vec<u8>>::new();
-                let byte_width = match bitmap_sheet.mode.as_str() {
-                    "160A" | "320A" | "320D" => 8,
-                    _ => 4,
-                };
                 let mut palettes = vec![0u8; (bitmap.width / byte_width) as usize];
                 for y in 0..bitmap_sheet.dl_height as u32 {
                     let mut bytes = Vec::<u8>::new();
@@ -202,14 +211,17 @@ fn main() -> Result<()> {
                                 c
                             } else {
                                 // Add a new color to the color table
-                                if maxcolors < 24 {
+                                if maxcolors < maxmaxcolors {
                                     colors[maxcolors].0 = color[0];
                                     colors[maxcolors].1 = color[1];
                                     colors[maxcolors].2 = color[2];
                                     maxcolors += 1;
                                     (maxcolors - 1) as u8
                                 } else {
-                                    return Err(anyhow!("Bitmap {}: Too many colors", bitmap.name));
+                                    return Err(anyhow!(
+                                        "Bitmap {}: Too many colors at {xp}, {yp}",
+                                        bitmap.name
+                                    ));
                                 }
                             };
 
@@ -230,6 +242,17 @@ fn main() -> Result<()> {
                                     if let Some(p) = palette {
                                         if px != p {
                                             return Err(anyhow!("Bitmap {}: Two pixels use a different palette in the same byte (x = {}, y = {})", bitmap.name, xp, yp));
+                                        }
+                                    } else {
+                                        palette = Some(px as u8);
+                                    }
+                                }
+                                "320C" => {
+                                    cx = (c % 4) + 1; // 0 is background
+                                    let px = (c / 4) * 4;
+                                    if let Some(p) = palette {
+                                        if px != p {
+                                            return Err(anyhow!("Bitmap {}: Two pixels use a different palette in the same byte (x = {}, y = {}, color = {:?}, palette = {:?})", bitmap.name, xp, yp, c, p));
                                         }
                                     } else {
                                         palette = Some(px as u8);
@@ -257,7 +280,8 @@ fn main() -> Result<()> {
                                     {
                                         // This is not background
                                         if colorr != color {
-                                            return Err(anyhow!("Bitmap {}: Two consecutive pixels have a different color in 320C bitmap_sheet.mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", bitmap.name, x, y, color, colorr));
+                                            println!("// Bitmap {}: Two consecutive pixels have a different color in 320C mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", bitmap.name, x, y, color, colorr);
+                                            //return Err(anyhow!("Bitmap {}: Two consecutive pixels have a different color in 320C mode (x = {}, y = {}, color1 = {:?}, color2 = {:?})", bitmap.name, x, y, color, colorr));
                                         }
                                     }
                                 }
@@ -320,6 +344,10 @@ fn main() -> Result<()> {
                                     | (if c & 2 != 0 { 16 } else { 0 });
                                 current_bits += 1;
                                 if current_bits == 4 {
+                                    if let Some(p) = palette {
+                                        palettes[(x / 4) as usize] = p;
+                                        palette = None;
+                                    }
                                     bytes.push(current_byte);
                                     current_byte = 0;
                                     current_bits = 0;
@@ -340,6 +368,10 @@ fn main() -> Result<()> {
                                 }
                                 current_bits += 1;
                                 if current_bits == 4 {
+                                    if let Some(p) = palette {
+                                        palettes[(x / 4) as usize] = p;
+                                        palette = None;
+                                    }
                                     bytes.push(current_byte);
                                     current_byte = 0;
                                     current_bits = 0;
@@ -573,7 +605,7 @@ fn main() -> Result<()> {
                 let palette;
                 let index_in_palette;
                 match bitmap_sheet.mode.as_str() {
-                    "320A" => {
+                    "320A" | "320C" => {
                         palette = i;
                         index_in_palette = 2;
                     }
