@@ -216,6 +216,7 @@ fn main() -> Result<()> {
                                     colors[maxcolors].1 = color[1];
                                     colors[maxcolors].2 = color[2];
                                     maxcolors += 1;
+                                    println!("// Added new color {:?} to the palette at {x},{y}", color);
                                     (maxcolors - 1) as u8
                                 } else {
                                     return Err(anyhow!(
@@ -230,7 +231,7 @@ fn main() -> Result<()> {
                                     cx = 1;
                                     if let Some(p) = palette {
                                         if c as u8 != p {
-                                            return Err(anyhow!("Bitmap {}: Two pixels use a different palette in the same byte (x = {}, y = {}, color1 = {:?}, color2 = {:?})", bitmap.name, xp, yp, c, p - 1));
+                                            return Err(anyhow!("Bitmap {}: Two pixels use a different palette in the same byte (x = {}, y = {}, color1 = {:?}, color2 = {:?})", bitmap.name, xp, yp, c, p));
                                         }
                                     } else {
                                         palette = Some(c as u8);
