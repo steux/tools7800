@@ -56,6 +56,7 @@ struct Sprite {
     #[serde(default)]
     background: Option<String>,
     bank: Option<u8>,
+    fake: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -361,101 +362,76 @@ fn main() -> Result<()> {
                 }
 
                 // Whoaw. We do have our pixels vector. Let's output it
-                let bank = if sprite.bank.is_some() {
-                    sprite.bank
-                } else if sprite_sheet.bank.is_some() {
-                    sprite_sheet.bank
-                } else {
-                    None
-                };
-                if let Some(b) = bank {
-                    print!("bank{} ", b);
-                }
-                let default_height = if let Some(h) = sprite_sheet.holeydma {
-                    h
-                } else if let Some(h) = sprite_sheet.default_height {
-                    h
-                } else if sprite.height == 8 {
-                    8
-                } else {
-                    16
-                };
-                if sprite.holeydma && (default_height == 8 || default_height == 16) {
-                    print!("holeydma ");
-                }
-                if default_height == 16 && sprite.height < 16 {
-                    // This is a special case: small sprite for 16 holey DMA (a bullet for instance)
-                    print!(
-                        "reversed scattered(16,{}) char {}[{}] = {{\n\t",
-                        bytes.len() / sprite.height as usize,
-                        sprite.name,
-                        bytes.len() / sprite.height as usize * default_height as usize
-                    );
-                    let mut c = 1;
-                    for i in 0..bytes.len() {
-                        print!("0x{:02x}", bytes[i]);
-                        if c % 16 != 0 {
-                            print!(", ");
-                        } else {
-                            print!(",\n\t");
-                        }
-                        c += 1;
+                if sprite.fake != Some(true) {
+                    let bank = if sprite.bank.is_some() {
+                        sprite.bank
+                    } else if sprite_sheet.bank.is_some() {
+                        sprite_sheet.bank
+                    } else {
+                        None
+                    };
+                    if let Some(b) = bank {
+                        print!("bank{} ", b);
                     }
-                    for _ in bytes.len()
-                        ..bytes.len() / sprite.height as usize * default_height as usize - 1
-                    {
-                        print!("0x00");
-                        if c % 16 != 0 {
-                            print!(", ");
-                        } else {
-                            print!(",\n\t");
-                        }
-                        c += 1;
+                    let default_height = if let Some(h) = sprite_sheet.holeydma {
+                        h
+                    } else if let Some(h) = sprite_sheet.default_height {
+                        h
+                    } else if sprite.height == 8 {
+                        8
+                    } else {
+                        16
+                    };
+                    if sprite.holeydma && (default_height == 8 || default_height == 16) {
+                        print!("holeydma ");
                     }
-                    println!("0x00\n}};");
-                } else {
-                    let nb_sprites = sprite.height / default_height as u32;
-                    if nb_sprites * default_height as u32 != sprite.height {
-                        return Err(anyhow!(
-                            "Sprite {}: height {} not proportional to default height {}",
-                            sprite.name,
-                            sprite.height,
-                            default_height
-                        ));
-                    }
-                    let mut c = 0;
-                    let l = bytes.len() / nb_sprites as usize;
-                    print!(
-                        "reversed scattered({},{}) char {}[{}] = {{\n\t",
-                        default_height,
-                        l / default_height as usize,
-                        sprite.name,
-                        l
-                    );
-                    for _ in 0..l - 1 {
-                        print!("0x{:02x}", bytes[c]);
-                        if (c + 1) % 16 != 0 {
-                            print!(", ");
-                        } else {
-                            print!(",\n\t");
-                        }
-                        c += 1;
-                    }
-                    println!("0x{:02x}\n}};", bytes[c]);
-                    c += 1;
-                    for i in 1..nb_sprites {
-                        if sprite.holeydma && (default_height == 8 || default_height == 16) {
-                            print!("holeydma ");
-                        }
-                        if let Some(b) = bank {
-                            print!("bank{} ", b);
-                        }
+                    if default_height == 16 && sprite.height < 16 {
+                        // This is a special case: small sprite for 16 holey DMA (a bullet for instance)
                         print!(
-                            "reversed scattered({},{}) char {}_{}[{}] = {{\n\t",
+                            "reversed scattered(16,{}) char {}[{}] = {{\n\t",
+                            bytes.len() / sprite.height as usize,
+                            sprite.name,
+                            bytes.len() / sprite.height as usize * default_height as usize
+                        );
+                        let mut c = 1;
+                        for i in 0..bytes.len() {
+                            print!("0x{:02x}", bytes[i]);
+                            if c % 16 != 0 {
+                                print!(", ");
+                            } else {
+                                print!(",\n\t");
+                            }
+                            c += 1;
+                        }
+                        for _ in bytes.len()
+                            ..bytes.len() / sprite.height as usize * default_height as usize - 1
+                        {
+                            print!("0x00");
+                            if c % 16 != 0 {
+                                print!(", ");
+                            } else {
+                                print!(",\n\t");
+                            }
+                            c += 1;
+                        }
+                        println!("0x00\n}};");
+                    } else {
+                        let nb_sprites = sprite.height / default_height as u32;
+                        if nb_sprites * default_height as u32 != sprite.height {
+                            return Err(anyhow!(
+                                "Sprite {}: height {} not proportional to default height {}",
+                                sprite.name,
+                                sprite.height,
+                                default_height
+                            ));
+                        }
+                        let mut c = 0;
+                        let l = bytes.len() / nb_sprites as usize;
+                        print!(
+                            "reversed scattered({},{}) char {}[{}] = {{\n\t",
                             default_height,
                             l / default_height as usize,
                             sprite.name,
-                            i,
                             l
                         );
                         for _ in 0..l - 1 {
@@ -469,6 +445,33 @@ fn main() -> Result<()> {
                         }
                         println!("0x{:02x}\n}};", bytes[c]);
                         c += 1;
+                        for i in 1..nb_sprites {
+                            if sprite.holeydma && (default_height == 8 || default_height == 16) {
+                                print!("holeydma ");
+                            }
+                            if let Some(b) = bank {
+                                print!("bank{} ", b);
+                            }
+                            print!(
+                                "reversed scattered({},{}) char {}_{}[{}] = {{\n\t",
+                                default_height,
+                                l / default_height as usize,
+                                sprite.name,
+                                i,
+                                l
+                            );
+                            for _ in 0..l - 1 {
+                                print!("0x{:02x}", bytes[c]);
+                                if (c + 1) % 16 != 0 {
+                                    print!(", ");
+                                } else {
+                                    print!(",\n\t");
+                                }
+                                c += 1;
+                            }
+                            println!("0x{:02x}\n}};", bytes[c]);
+                            c += 1;
+                        }
                     }
                 }
             }
