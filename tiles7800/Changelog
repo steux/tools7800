@@ -1,48 +1,50 @@
 v0.4.0 (30/06/2024) :
+  - Added support for fake tiles, in order to minimize the number of actual
+	tiles
   - Added optional prefix to sequences
-	- Added name, generate, bank and holeydma for sequences (for easier bankswitching management)
+  - Added name, generate, bank and holeydma for sequences (for easier bankswitching management)
   - For lonely and consecutive tiles, automatically switch to immediate mode
-	- Introduced pregeneration of immediate sequences
-	- Better tileset optimizations (look for a tileet within existing stored
+  - Introduced pregeneration of immediate sequences
+  - Better tileset optimizations (look for a tileet within existing stored
 	tilesets)
-	- Accepts tile numbers as sequences
-	- Aliases work group by group, not just tile by tile
-	- Fixed a bug with tiled image width not matching the actual image width
+  - Accepts tile numbers as sequences
+  - Aliases work group by group, not just tile by tile
+  - Fixed a bug with tiled image width not matching the actual image width
 
 v0.3.7 (06/28/2024) :
-	- Refactored code to better mix immediate & tiled modes
-	- Better tileset optimization
-	- Changed default maxsize (to 31 and 15 depending on tile widthsize (to 31
+  - Refactored code to better mix immediate & tiled modes
+  - Better tileset optimization
+  - Changed default maxsize (to 31 and 15 depending on tile widthsize (to 31
 	and 15 depending on tile width. Assumes 160A/320A modes)
 
 v0.3.6 (06/20/2024) :
-	- Solved some bugs with background & aliases 
+  - Solved some bugs with background & aliases 
 
 v0.3.5 (03/12/2024) :
-	- Implemented immediate mode sparse tiling code generation
+  - Implemented immediate mode sparse tiling code generation
 
 v0.3.4 (03/11/2024) :
-	- Set limit to 16 to tileset size (each tile can be 2 bytes wide)
-	- Implemented 8x8 tiles support
+  - Set limit to 16 to tileset size (each tile can be 2 bytes wide)
+  - Implemented 8x8 tiles support
 
 v0.3.3 (10/27/2023) :
-	- Added limit of 31 to tileset size 
-	- Added mirror option for sprites (only vertical at the moment)
+  - Added limit of 31 to tileset size 
+  - Added mirror option for sprites (only vertical at the moment)
 
 v0.3.2 (10/09/2023) :
-	- Added background keyword support
-	- Changed generated table name
+  - Added background keyword support
+  - Changed generated table name
 
 v0.3.1 (09/28/2023) :
-	- Added bank code generation 
+  - Added bank code generation 
 
 v0.3 (09/08/2023) :
-	- Big bug correction when width != height
-	- Modified code generation for sparse tiling in order to support up to 256 high maps
-	- Added more tiles compression
+  - Big bug correction when width != height
+  - Modified code generation for sparse tiling in order to support up to 256 high maps
+  - Added more tiles compression
 
 v0.2 :
-	- Added sparse tiling support
+  - Added sparse tiling support
 
 v0.1 :
   - tmx loading support

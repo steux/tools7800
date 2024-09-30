@@ -101,6 +101,8 @@ struct Sprite {
     mirror: Option<Mirror>,
     #[serde(default)]
     background: Option<String>,
+    #[serde(default)]
+    fake: Option<bool>,
 }
 
 #[derive(Debug, Clone)]
@@ -110,6 +112,7 @@ struct Tile<'a> {
     palette_number: u8,
     background: Option<u32>,
     gfx: Vec<u8>,
+    fake: bool,
 }
 
 fn default_sprite_size() -> u32 {
@@ -528,6 +531,7 @@ fn main() -> Result<()> {
                                                     palette_number,
                                                     background,
                                                     gfx: tgfx.clone(),
+                                                    fake: tile.fake.unwrap_or(false),
                                                 },
                                             );
                                             tile_names_ex.insert(
@@ -554,6 +558,7 @@ fn main() -> Result<()> {
                                                         palette_number,
                                                         background: bg,
                                                         gfx: tgfx,
+                                                        fake: tile.fake.unwrap_or(false),
                                                     },
                                                 );
                                             }
@@ -745,6 +750,7 @@ fn main() -> Result<()> {
                                                         if bt.mode == tx.mode
                                                             && bt.palette_number
                                                                 == tx.palette_number
+                                                            && bt.fake == tx.fake
                                                         {
                                                             // Yes, let's add it to the current background tileset
                                                             if background_tileset.len()
@@ -788,6 +794,7 @@ fn main() -> Result<()> {
                                                         // Is the cell compatible with the foreground tileset in construction ?
                                                         if t.mode == tx.mode
                                                             && t.palette_number == tx.palette_number
+                                                            && t.fake == tx.fake
                                                         {
                                                             // Yes, let's add it to the current foreground tileset
                                                             if foreground_tileset.len()
@@ -842,6 +849,7 @@ fn main() -> Result<()> {
                                                     // Is the cell compatible with the background tileset in construction ?
                                                     if t.mode == tx.mode
                                                         && t.palette_number == tx.palette_number
+                                                        && t.fake == tx.fake
                                                     {
                                                         // Yes, let's add it the current background tileset
                                                         if background_tileset.len()
@@ -878,6 +886,7 @@ fn main() -> Result<()> {
                                                             if t.mode == tx.mode
                                                                 && t.palette_number
                                                                     == tx.palette_number
+                                                                && t.fake == tx.fake
                                                             {
                                                                 // Yes, let's add it the current foreground tileset
                                                                 if foreground_tileset.len()
@@ -915,6 +924,7 @@ fn main() -> Result<()> {
                                                     if let Some(tx) = foreground_tileset.last() {
                                                         if t.mode == tx.mode
                                                             && t.palette_number == tx.palette_number
+                                                            && t.fake == tx.fake
                                                         {
                                                             // Yes, let's add it the current foreground tileset
                                                             if foreground_tileset.len()
@@ -1018,6 +1028,10 @@ fn main() -> Result<()> {
                                                     }
                                                 }
                                                 previous_index = Some(t.index);
+                                                if t.fake {
+                                                    continuous_tileset = false; // Avoid direct use
+                                                                                // of immediate tile data, since it's fake
+                                                }
                                             }
                                             if continuous_tileset {
                                                 w.push(tn.len() * bytes_per_tile);
