@@ -575,6 +575,7 @@ fn main() -> Result<()> {
                                 // Generate the C code for the the sparse tiles
                                 // to be used with multisprite.h or sparse_tiling.h header
                                 let mut tiles_store = Vec::<(String, Vec<u32>, bool)>::new();
+                                let mut sequences_code = HashMap::<String, String>::new();
 
                                 // Process sequences & pregenerate immediate data
                                 if let Some(sequences) = &tiles_sheet.sequences {
@@ -659,24 +660,26 @@ fn main() -> Result<()> {
                                             }
                                         }
                                         if generate {
+                                            let mut s = String::new();
+
                                             let l = tnx.len() * bytes_per_tile;
                                             if let Some(b) = sequence.bank {
-                                                print!("bank{b} ");
+                                                s.push_str(&format!("bank{b} "));
                                             } else if let Some(b) = tiles_sheet.bank {
-                                                print!("bank{b} ");
+                                                s.push_str(&format!("bank{b} "));
                                             }
                                             if let Some(h) = sequence.holeydma {
                                                 if h {
-                                                    print!("holeydma ");
+                                                    s.push_str("holeydma ");
                                                 }
                                             }
-                                            print!(
+                                            s.push_str(&format!(
                                                 "reversed scattered({},{}) char {}[{}] = {{\n\t",
                                                 tileheight,
                                                 l,
                                                 &name,
                                                 l * tileheight as usize
-                                            );
+                                            ));
                                             let mut i = 0;
                                             for y in 0..tileheight as usize {
                                                 for t in &seq {
@@ -685,22 +688,23 @@ fn main() -> Result<()> {
                                                         _ => 2,
                                                     };
                                                     for b in 0..(nb * bytes_per_tile) {
-                                                        print!(
+                                                        s.push_str(&format!(
                                                             "0x{:02x}",
                                                             t.gfx[y * (nb * bytes_per_tile) + b]
-                                                        );
+                                                        ));
                                                         if i != l * tileheight as usize - 1 {
                                                             if (i + 1) % 16 != 0 {
-                                                                print!(", ");
+                                                                s.push_str(", ");
                                                             } else {
-                                                                print!(",\n\t");
+                                                                s.push_str(",\n\t");
                                                             }
                                                         }
                                                         i += 1;
                                                     }
                                                 }
                                             }
-                                            println!("}};");
+                                            s.push_str("};\n");
+                                            sequences_code.insert(name.clone(), s);
                                         }
                                         tiles_store.push((name, tnx, true));
                                     }
@@ -708,6 +712,7 @@ fn main() -> Result<()> {
 
                                 let mut tilesmap_store = Vec::<(String, String)>::new();
                                 let mut tilesmap = Vec::<String>::new();
+                                let mut output = String::new();
 
                                 for y in 0..height {
                                     // For each line, find the tilesets
@@ -1089,16 +1094,16 @@ fn main() -> Result<()> {
                                                 } else {
                                                     let name = format!("{}_{}_{}", varname, y, c);
                                                     if let Some(b) = tiles_sheet.bank {
-                                                        print!("bank{b} ");
+                                                        output.push_str(&format!("bank{b} "));
                                                     }
                                                     if immediate {
-                                                        print!(
+                                                        output.push_str(&format!(
                                                         "reversed scattered({},{}) char {}[{}] = {{\n\t",
                                                         tileheight,
                                                         l,
                                                         &name,
                                                         l * tileheight as usize
-                                                    );
+                                                    ));
                                                         let mut i = 0;
                                                         for y in 0..tileheight as usize {
                                                             for t in &s.1 {
@@ -1107,37 +1112,42 @@ fn main() -> Result<()> {
                                                                     _ => 2,
                                                                 };
                                                                 for b in 0..(nb * bytes_per_tile) {
-                                                                    print!(
+                                                                    output.push_str(&format!(
                                                                         "0x{:02x}",
                                                                         t.gfx[y
                                                                             * (nb
                                                                                 * bytes_per_tile)
                                                                             + b]
-                                                                    );
+                                                                    ));
                                                                     if i != l * tileheight as usize
                                                                         - 1
                                                                     {
                                                                         if (i + 1) % 16 != 0 {
-                                                                            print!(", ");
+                                                                            output.push_str(", ");
                                                                         } else {
-                                                                            print!(",\n\t");
+                                                                            output
+                                                                                .push_str(",\n\t");
                                                                         }
                                                                     }
                                                                     i += 1;
                                                                 }
                                                             }
                                                         }
-                                                        println!("}};");
+                                                        output.push_str("}};\n");
                                                     } else {
-                                                        print!(
+                                                        output.push_str(&format!(
                                                             "const char {}[{}] = {{",
                                                             &name,
                                                             tn.len()
-                                                        );
+                                                        ));
                                                         for i in 0..tn.len() - 1 {
-                                                            print!("{}, ", tn[i]);
+                                                            output
+                                                                .push_str(&format!("{}, ", tn[i]));
                                                         }
-                                                        println!("{}}};", tn[tn.len() - 1]);
+                                                        output.push_str(&format!(
+                                                            "{}}};\n",
+                                                            tn[tn.len() - 1]
+                                                        ));
                                                     }
                                                     tiles_store.push((name.clone(), tn, false));
                                                     tile_names.push(name);
@@ -1176,16 +1186,32 @@ fn main() -> Result<()> {
                                             if let Some(b) = tiles_sheet.bank {
                                                 print!("bank{b} ");
                                             }
-                                            println!(
-                                                "const char {}[] = {{{}96, 0xff}};",
+                                            output.push_str(&format!(
+                                                "const char {}[] = {{{}96, 0xff}};\n",
                                                 &tilemap_name, tilemap_str
-                                            );
+                                            ));
                                             tilesmap_store
                                                 .push((tilemap_name.clone(), tilemap_str.clone()));
                                             tilesmap.push(tilemap_name);
                                         }
                                     }
                                 }
+
+                                // Output sequences
+                                if let Some(sequences) = &tiles_sheet.sequences {
+                                    for (i, sequence) in sequences.iter().enumerate() {
+                                        let name = if let Some(n) = &sequence.name {
+                                            n.clone()
+                                        } else {
+                                            format!("{}_sequence_{}", varname, i)
+                                        };
+                                        print!("{}", sequences_code.get(&name).unwrap());
+                                    }
+                                }
+                                // Output tilemap
+                                //
+                                print!("{output}");
+
                                 println!("");
                                 if let Some(b) = tiles_sheet.bank {
                                     print!("bank{b} ");
