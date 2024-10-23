@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use image::{GenericImageView, Rgba};
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::str::FromStr;
 use xml_dom::level2::{Node, NodeType};
@@ -576,6 +576,7 @@ fn main() -> Result<()> {
                                 // to be used with multisprite.h or sparse_tiling.h header
                                 let mut tiles_store = Vec::<(String, Vec<u32>, bool)>::new();
                                 let mut sequences_code = HashMap::<String, String>::new();
+                                let mut sequences_used = HashSet::<String>::new();
 
                                 // Process sequences & pregenerate immediate data
                                 if let Some(sequences) = &tiles_sheet.sequences {
@@ -1055,6 +1056,7 @@ fn main() -> Result<()> {
                                                     if let Some(p) =
                                                         c.1.windows(tn.len()).position(|w| tn == w)
                                                     {
+                                                        sequences_used.insert(c.0.clone());
                                                         immediate = c.2;
                                                         found = if p == 0 {
                                                             Some(c.0.clone())
@@ -1205,14 +1207,16 @@ fn main() -> Result<()> {
                                         } else {
                                             format!("{}_sequence_{}", varname, i)
                                         };
-                                        print!("{}", sequences_code.get(&name).unwrap());
+                                        if sequences_used.contains(&name) {
+                                            print!("{}", sequences_code.get(&name).unwrap());
+                                        }
                                     }
                                 }
                                 // Output tilemap
                                 //
                                 print!("{output}");
 
-                                println!("");
+                                println!();
                                 if let Some(b) = tiles_sheet.bank {
                                     print!("bank{b} ");
                                 }
