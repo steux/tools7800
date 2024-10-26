@@ -582,7 +582,7 @@ fn main() -> Result<()> {
                                 if let Some(sequences) = &tiles_sheet.sequences {
                                     for (i, sequence) in sequences.iter().enumerate() {
                                         let name = if let Some(n) = &sequence.name {
-                                            n.clone()
+                                            format!("{}_{}", varname, n.clone())
                                         } else {
                                             format!("{}_sequence_{}", varname, i)
                                         };
@@ -1203,7 +1203,7 @@ fn main() -> Result<()> {
                                 if let Some(sequences) = &tiles_sheet.sequences {
                                     for (i, sequence) in sequences.iter().enumerate() {
                                         let name = if let Some(n) = &sequence.name {
-                                            n.clone()
+                                            format!("{}_{}", varname, n.clone())
                                         } else {
                                             format!("{}_sequence_{}", varname, i)
                                         };

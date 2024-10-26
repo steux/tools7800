@@ -1,5 +1,6 @@
 v0.4.1 (23/10/2024) :
-	- Only gneerate sequences when they are actually used (for easier multibank
+  - prepend sequences names with varname
+  - Only gneerate sequences when they are actually used (for easier multibank
 	level management)
 
 v0.4.0 (30/06/2024) :
