@@ -69,6 +69,7 @@ struct Sequence {
     generate: Option<bool>,
     name: Option<String>,
     prefix: Option<String>,
+    postfix: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -653,6 +654,37 @@ fn main() -> Result<()> {
                                         for _ in 0..sequence.repeat.unwrap_or(1) {
                                             seq.extend(tileset.iter());
                                             tnx.extend(tn.iter());
+                                        }
+                                        if let Some(postfix) = &sequence.postfix {
+                                            let ix;
+                                            let idx = postfix.parse::<u32>();
+                                            if let Ok(index) = idx {
+                                                let tile_name = tile_names_ex.get(&index);
+                                                if tile_name.is_none() {
+                                                    return Err(anyhow!(
+                                                        "Unknown tile number {}",
+                                                        index
+                                                    ));
+                                                }
+                                                ix = refs.get(tile_name.unwrap());
+                                            } else {
+                                                ix = refs.get(postfix);
+                                            }
+                                            if ix.is_none() {
+                                                return Err(anyhow!(
+                                                    "Unknown tile name {}",
+                                                    postfix
+                                                ));
+                                            }
+                                            let tile = tiles.get(ix.unwrap()).unwrap();
+                                            let nb = match tile.mode {
+                                                "160A" | "320A" | "320D" => 1,
+                                                _ => 2,
+                                            };
+                                            for i in 0..nb {
+                                                tnx.push(tile.index + (i * bytes_per_tile) as u32);
+                                            }
+                                            seq.push(tile);
                                         }
                                         let mut generate = true;
                                         if let Some(g) = sequence.generate {

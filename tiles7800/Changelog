@@ -2,6 +2,7 @@ v0.4.1 (23/10/2024) :
   - prepend sequences names with varname
   - Only gneerate sequences when they are actually used (for easier multibank
 	level management)
+	- Added postfix to sequences
 
 v0.4.0 (30/06/2024) :
   - Added support for fake tiles, in order to minimize the number of actual
