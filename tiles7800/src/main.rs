@@ -761,8 +761,11 @@ fn main() -> Result<()> {
                                         if cell == 0 {
                                             // Empty cell
                                             if !background_tileset.is_empty() {
-                                                tilesets
-                                                    .push((background_startx, background_tileset));
+                                                tilesets.insert(
+                                                    0,
+                                                    (background_startx, background_tileset),
+                                                );
+                                                //.push((background_startx, background_tileset));
                                                 background_tileset = Vec::<Tile>::new();
                                             }
                                             if !foreground_tileset.is_empty() {
@@ -999,8 +1002,11 @@ fn main() -> Result<()> {
                                             //return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Wrong tilesheet. Index unknown")));
                                             // It's not in the tilesheet. Consider it as 0 (empty)
                                             if !background_tileset.is_empty() {
-                                                tilesets
-                                                    .push((background_startx, background_tileset));
+                                                tilesets.insert(
+                                                    0,
+                                                    (background_startx, background_tileset),
+                                                );
+                                                //    .push((background_startx, background_tileset));
                                                 background_tileset = Vec::<Tile>::new();
                                             }
                                             if !foreground_tileset.is_empty() {
@@ -1020,7 +1026,8 @@ fn main() -> Result<()> {
                                     }
                                     // Write the last tilesets
                                     if !background_tileset.is_empty() {
-                                        tilesets.push((background_startx, background_tileset));
+                                        tilesets.insert(0, (background_startx, background_tileset));
+                                        //tilesets.push((background_startx, background_tileset));
                                     }
                                     if !foreground_tileset.is_empty() {
                                         tilesets.push((foreground_startx, foreground_tileset));
