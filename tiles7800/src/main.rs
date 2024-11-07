@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use image::{GenericImageView, Rgba};
 use serde::Deserialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs;
 use std::str::FromStr;
 use xml_dom::level2::{Node, NodeType};
@@ -749,7 +749,8 @@ fn main() -> Result<()> {
 
                                 for y in 0..height {
                                     // For each line, find the tilesets
-                                    let mut tilesets = Vec::<(u32, Vec<Tile>)>::new();
+                                    let mut tilesets =
+                                        VecDeque::<(u32, Vec<Tile>)>::with_capacity(10);
                                     let mut background_tileset = Vec::<Tile>::new();
                                     let mut foreground_tileset = Vec::<Tile>::new();
                                     let mut deferred_tileset = Vec::<Vec<Tile>>::new();
@@ -761,20 +762,21 @@ fn main() -> Result<()> {
                                         if cell == 0 {
                                             // Empty cell
                                             if !background_tileset.is_empty() {
-                                                tilesets.insert(
-                                                    0,
-                                                    (background_startx, background_tileset),
-                                                );
-                                                //.push((background_startx, background_tileset));
+                                                tilesets.push_front((
+                                                    background_startx,
+                                                    background_tileset,
+                                                ));
                                                 background_tileset = Vec::<Tile>::new();
                                             }
                                             if !foreground_tileset.is_empty() {
-                                                tilesets
-                                                    .push((foreground_startx, foreground_tileset));
+                                                tilesets.push_back((
+                                                    foreground_startx,
+                                                    foreground_tileset,
+                                                ));
                                                 foreground_tileset = Vec::<Tile>::new();
                                             }
                                             for i in 0..deferred_tileset.len() {
-                                                tilesets.push((
+                                                tilesets.push_back((
                                                     deferred_startx[i],
                                                     deferred_tileset[i].clone(),
                                                 ))
@@ -797,7 +799,7 @@ fn main() -> Result<()> {
                                                             if background_tileset.len()
                                                                 >= tileset_maxsize
                                                             {
-                                                                tilesets.push((
+                                                                tilesets.push_front((
                                                                     background_startx,
                                                                     background_tileset,
                                                                 ));
@@ -808,7 +810,7 @@ fn main() -> Result<()> {
                                                             background_tileset.push(bt.clone());
                                                         } else {
                                                             // No. Let's write this background tileset
-                                                            tilesets.push((
+                                                            tilesets.push_front((
                                                                 background_startx,
                                                                 background_tileset,
                                                             ));
@@ -823,7 +825,7 @@ fn main() -> Result<()> {
                                                         background_startx = x as u32;
                                                         // And send the current foreground
                                                         if !foreground_tileset.is_empty() {
-                                                            tilesets.push((
+                                                            tilesets.push_back((
                                                                 foreground_startx,
                                                                 foreground_tileset,
                                                             ));
@@ -841,7 +843,7 @@ fn main() -> Result<()> {
                                                             if foreground_tileset.len()
                                                                 >= tileset_maxsize
                                                             {
-                                                                tilesets.push((
+                                                                tilesets.push_back((
                                                                     foreground_startx,
                                                                     foreground_tileset,
                                                                 ));
@@ -853,7 +855,7 @@ fn main() -> Result<()> {
                                                             //println!("foreground_tileset = {:?}", foreground_tileset);
                                                         } else {
                                                             // No. Let's write this foreground tileset
-                                                            tilesets.push((
+                                                            tilesets.push_back((
                                                                 foreground_startx,
                                                                 foreground_tileset,
                                                             ));
@@ -870,14 +872,14 @@ fn main() -> Result<()> {
                                                 } else {
                                                     // Empty cell
                                                     if !background_tileset.is_empty() {
-                                                        tilesets.push((
+                                                        tilesets.push_front((
                                                             background_startx,
                                                             background_tileset,
                                                         ));
                                                         background_tileset = Vec::<Tile>::new();
                                                     }
                                                     if !foreground_tileset.is_empty() {
-                                                        tilesets.push((
+                                                        tilesets.push_back((
                                                             foreground_startx,
                                                             foreground_tileset,
                                                         ));
@@ -896,7 +898,7 @@ fn main() -> Result<()> {
                                                         if background_tileset.len()
                                                             >= tileset_maxsize
                                                         {
-                                                            tilesets.push((
+                                                            tilesets.push_front((
                                                                 background_startx,
                                                                 background_tileset,
                                                             ));
@@ -915,7 +917,7 @@ fn main() -> Result<()> {
                                                         }
                                                     } else {
                                                         // No. Let's write this background tileset
-                                                        tilesets.push((
+                                                        tilesets.push_front((
                                                             background_startx,
                                                             background_tileset,
                                                         ));
@@ -933,7 +935,7 @@ fn main() -> Result<()> {
                                                                 if foreground_tileset.len()
                                                                     >= tileset_maxsize
                                                                 {
-                                                                    tilesets.push((
+                                                                    tilesets.push_back((
                                                                         foreground_startx,
                                                                         foreground_tileset,
                                                                     ));
@@ -944,7 +946,7 @@ fn main() -> Result<()> {
                                                                 foreground_tileset.push(t.clone());
                                                             } else {
                                                                 // No. It's not compatible. Let's write this foreground tileset
-                                                                tilesets.push((
+                                                                tilesets.push_back((
                                                                     foreground_startx,
                                                                     foreground_tileset,
                                                                 ));
@@ -971,7 +973,7 @@ fn main() -> Result<()> {
                                                             if foreground_tileset.len()
                                                                 >= tileset_maxsize
                                                             {
-                                                                tilesets.push((
+                                                                tilesets.push_back((
                                                                     foreground_startx,
                                                                     foreground_tileset,
                                                                 ));
@@ -982,7 +984,7 @@ fn main() -> Result<()> {
                                                             foreground_tileset.push(t.clone());
                                                         } else {
                                                             // No, it's not compatible. Let's write the foreground tileset as it is
-                                                            tilesets.push((
+                                                            tilesets.push_back((
                                                                 foreground_startx,
                                                                 foreground_tileset,
                                                             ));
@@ -1002,20 +1004,22 @@ fn main() -> Result<()> {
                                             //return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Wrong tilesheet. Index unknown")));
                                             // It's not in the tilesheet. Consider it as 0 (empty)
                                             if !background_tileset.is_empty() {
-                                                tilesets.insert(
-                                                    0,
-                                                    (background_startx, background_tileset),
-                                                );
+                                                tilesets.push_front((
+                                                    background_startx,
+                                                    background_tileset,
+                                                ));
                                                 //    .push((background_startx, background_tileset));
                                                 background_tileset = Vec::<Tile>::new();
                                             }
                                             if !foreground_tileset.is_empty() {
-                                                tilesets
-                                                    .push((foreground_startx, foreground_tileset));
+                                                tilesets.push_back((
+                                                    foreground_startx,
+                                                    foreground_tileset,
+                                                ));
                                                 foreground_tileset = Vec::<Tile>::new();
                                             }
                                             for i in 0..deferred_tileset.len() {
-                                                tilesets.push((
+                                                tilesets.push_back((
                                                     deferred_startx[i],
                                                     deferred_tileset[i].clone(),
                                                 ))
@@ -1026,14 +1030,14 @@ fn main() -> Result<()> {
                                     }
                                     // Write the last tilesets
                                     if !background_tileset.is_empty() {
-                                        tilesets.insert(0, (background_startx, background_tileset));
-                                        //tilesets.push((background_startx, background_tileset));
+                                        tilesets
+                                            .push_front((background_startx, background_tileset));
                                     }
                                     if !foreground_tileset.is_empty() {
-                                        tilesets.push((foreground_startx, foreground_tileset));
+                                        tilesets.push_back((foreground_startx, foreground_tileset));
                                     }
                                     for i in 0..deferred_tileset.len() {
-                                        tilesets.push((
+                                        tilesets.push_back((
                                             deferred_startx[i],
                                             deferred_tileset[i].clone(),
                                         ));
