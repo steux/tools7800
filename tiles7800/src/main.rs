@@ -1043,15 +1043,61 @@ fn main() -> Result<()> {
                                         ));
                                     }
 
+                                    // OK. Now we have the tilesets. Let's try to see if we can
+                                    // break these into a new tilesets for better optimization
+                                    let mut tilesets_ex = Vec::<(u32, Vec<Tile>)>::new();
+                                    for s in tilesets {
+                                        if s.1.len() >= 5 {
+                                            // The tilesets must be at least 5 tiles long
+                                            let mut tn = Vec::new(); // The vector of tile numbers (in Atari 7800 format)
+                                            for t in &s.1 {
+                                                let nb = match t.mode {
+                                                    "160A" | "320A" | "320D" => 1,
+                                                    _ => 2,
+                                                };
+                                                for i in 0..nb {
+                                                    tn.push(t.index + (i * bytes_per_tile) as u32);
+                                                }
+                                            }
+                                            // Let's look at the previous sequences
+                                            let mut found = false;
+                                            for c in &tiles_store {
+                                                if c.2 {
+                                                    // Look only at immediate sequences
+                                                    // Look for tn in c.1
+                                                    if c.1
+                                                        .windows(tn.len())
+                                                        .position(|w| tn == w)
+                                                        .is_none()
+                                                    {
+                                                        found = true;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            if found {
+                                                // Keep it. It's a part of sequence
+                                                tilesets_ex.push(s);
+                                            } else {
+                                                // TODO: OK. This is not a sequence. Let's try to cut it.
+                                                // Let's look at the sequence but the first tile
+                                                // And then at the sequence but the last tile
+                                                tilesets_ex.push(s);
+                                            }
+                                        } else {
+                                            tilesets_ex.push(s);
+                                        }
+                                    }
+
                                     // Write this line of data
                                     {
                                         let mut c = 0;
                                         let mut w = Vec::new();
                                         let mut tile_names = Vec::new();
                                         let mut imm = Vec::new();
-                                        for s in &tilesets {
+                                        for s in &tilesets_ex {
                                             let mut immediate = args.immediate;
-                                            let mut tn = Vec::new();
+                                            let mut tn = Vec::new(); // The vector of tile numbers (in Atari 7800 format)
                                             let mut continuous_tileset = true;
                                             let mut previous_index = None;
                                             for t in &s.1 {
@@ -1202,7 +1248,7 @@ fn main() -> Result<()> {
                                         }
                                         c = 0;
                                         let mut tilemap_str = String::new();
-                                        for s in &tilesets {
+                                        for s in &tilesets_ex {
                                             let ttype = s.1.first().unwrap();
                                             let write_mode = match ttype.mode {
                                                 "160A" | "320A" | "320D" => 0x40,
