@@ -70,6 +70,7 @@ struct Sequence {
     name: Option<String>,
     prefix: Option<String>,
     postfix: Option<String>,
+    ignore: Option<Vec<String>>,
 }
 
 #[derive(Deserialize)]
@@ -582,164 +583,178 @@ fn main() -> Result<()> {
                                 // Process sequences & pregenerate immediate data
                                 if let Some(sequences) = &tiles_sheet.sequences {
                                     for (i, sequence) in sequences.iter().enumerate() {
-                                        let name = if let Some(n) = &sequence.name {
-                                            format!("{}_{}", varname, n.clone())
+                                        let ignore = if let Some(names) = &sequence.ignore {
+                                            names.contains(&varname)
                                         } else {
-                                            format!("{}_sequence_{}", varname, i)
+                                            false
                                         };
-                                        let mut tn = Vec::new();
-                                        let mut tileset = Vec::new();
-                                        for s in &sequence.sequence {
-                                            let ix;
-                                            let idx = s.parse::<u32>();
-                                            if let Ok(index) = idx {
-                                                let tile_name = tile_names_ex.get(&index);
-                                                if tile_name.is_none() {
-                                                    return Err(anyhow!(
-                                                        "Unknown tile number {}",
-                                                        index
-                                                    ));
-                                                }
-                                                ix = refs.get(tile_name.unwrap());
+                                        if !ignore {
+                                            let name = if let Some(n) = &sequence.name {
+                                                format!("{}_{}", varname, n.clone())
                                             } else {
-                                                ix = refs.get(s);
-                                            }
-                                            if ix.is_none() {
-                                                return Err(anyhow!("Unknown tile name {}", s));
-                                            }
-                                            let tile = tiles.get(ix.unwrap()).unwrap();
-                                            let nb = match tile.mode {
-                                                "160A" | "320A" | "320D" => 1,
-                                                _ => 2,
+                                                format!("{}_sequence_{}", varname, i)
                                             };
-                                            for i in 0..nb {
-                                                tn.push(tile.index + (i * bytes_per_tile) as u32);
+                                            let mut tn = Vec::new();
+                                            let mut tileset = Vec::new();
+                                            for s in &sequence.sequence {
+                                                let ix;
+                                                let idx = s.parse::<u32>();
+                                                if let Ok(index) = idx {
+                                                    let tile_name = tile_names_ex.get(&index);
+                                                    if tile_name.is_none() {
+                                                        return Err(anyhow!(
+                                                            "Unknown tile number {}",
+                                                            index
+                                                        ));
+                                                    }
+                                                    ix = refs.get(tile_name.unwrap());
+                                                } else {
+                                                    ix = refs.get(s);
+                                                }
+                                                if ix.is_none() {
+                                                    return Err(anyhow!("Unknown tile name {}", s));
+                                                }
+                                                let tile = tiles.get(ix.unwrap()).unwrap();
+                                                let nb = match tile.mode {
+                                                    "160A" | "320A" | "320D" => 1,
+                                                    _ => 2,
+                                                };
+                                                for i in 0..nb {
+                                                    tn.push(
+                                                        tile.index + (i * bytes_per_tile) as u32,
+                                                    );
+                                                }
+                                                tileset.push(tile);
                                             }
-                                            tileset.push(tile);
-                                        }
 
-                                        let mut seq = Vec::<&Tile>::new();
-                                        let mut tnx = Vec::new();
-                                        if let Some(prefix) = &sequence.prefix {
-                                            let ix;
-                                            let idx = prefix.parse::<u32>();
-                                            if let Ok(index) = idx {
-                                                let tile_name = tile_names_ex.get(&index);
-                                                if tile_name.is_none() {
+                                            let mut seq = Vec::<&Tile>::new();
+                                            let mut tnx = Vec::new();
+                                            if let Some(prefix) = &sequence.prefix {
+                                                let ix;
+                                                let idx = prefix.parse::<u32>();
+                                                if let Ok(index) = idx {
+                                                    let tile_name = tile_names_ex.get(&index);
+                                                    if tile_name.is_none() {
+                                                        return Err(anyhow!(
+                                                            "Unknown tile number {}",
+                                                            index
+                                                        ));
+                                                    }
+                                                    ix = refs.get(tile_name.unwrap());
+                                                } else {
+                                                    ix = refs.get(prefix);
+                                                }
+                                                if ix.is_none() {
                                                     return Err(anyhow!(
-                                                        "Unknown tile number {}",
-                                                        index
+                                                        "Unknown tile name {}",
+                                                        prefix
                                                     ));
                                                 }
-                                                ix = refs.get(tile_name.unwrap());
-                                            } else {
-                                                ix = refs.get(prefix);
+                                                let tile = tiles.get(ix.unwrap()).unwrap();
+                                                let nb = match tile.mode {
+                                                    "160A" | "320A" | "320D" => 1,
+                                                    _ => 2,
+                                                };
+                                                for i in 0..nb {
+                                                    tnx.push(
+                                                        tile.index + (i * bytes_per_tile) as u32,
+                                                    );
+                                                }
+                                                seq.push(tile);
                                             }
-                                            if ix.is_none() {
-                                                return Err(anyhow!(
-                                                    "Unknown tile name {}",
-                                                    prefix
-                                                ));
+                                            for _ in 0..sequence.repeat.unwrap_or(1) {
+                                                seq.extend(tileset.iter());
+                                                tnx.extend(tn.iter());
                                             }
-                                            let tile = tiles.get(ix.unwrap()).unwrap();
-                                            let nb = match tile.mode {
-                                                "160A" | "320A" | "320D" => 1,
-                                                _ => 2,
-                                            };
-                                            for i in 0..nb {
-                                                tnx.push(tile.index + (i * bytes_per_tile) as u32);
-                                            }
-                                            seq.push(tile);
-                                        }
-                                        for _ in 0..sequence.repeat.unwrap_or(1) {
-                                            seq.extend(tileset.iter());
-                                            tnx.extend(tn.iter());
-                                        }
-                                        if let Some(postfix) = &sequence.postfix {
-                                            let ix;
-                                            let idx = postfix.parse::<u32>();
-                                            if let Ok(index) = idx {
-                                                let tile_name = tile_names_ex.get(&index);
-                                                if tile_name.is_none() {
+                                            if let Some(postfix) = &sequence.postfix {
+                                                let ix;
+                                                let idx = postfix.parse::<u32>();
+                                                if let Ok(index) = idx {
+                                                    let tile_name = tile_names_ex.get(&index);
+                                                    if tile_name.is_none() {
+                                                        return Err(anyhow!(
+                                                            "Unknown tile number {}",
+                                                            index
+                                                        ));
+                                                    }
+                                                    ix = refs.get(tile_name.unwrap());
+                                                } else {
+                                                    ix = refs.get(postfix);
+                                                }
+                                                if ix.is_none() {
                                                     return Err(anyhow!(
-                                                        "Unknown tile number {}",
-                                                        index
+                                                        "Unknown tile name {}",
+                                                        postfix
                                                     ));
                                                 }
-                                                ix = refs.get(tile_name.unwrap());
-                                            } else {
-                                                ix = refs.get(postfix);
+                                                let tile = tiles.get(ix.unwrap()).unwrap();
+                                                let nb = match tile.mode {
+                                                    "160A" | "320A" | "320D" => 1,
+                                                    _ => 2,
+                                                };
+                                                for i in 0..nb {
+                                                    tnx.push(
+                                                        tile.index + (i * bytes_per_tile) as u32,
+                                                    );
+                                                }
+                                                seq.push(tile);
                                             }
-                                            if ix.is_none() {
-                                                return Err(anyhow!(
-                                                    "Unknown tile name {}",
-                                                    postfix
-                                                ));
+                                            let mut generate = true;
+                                            if let Some(g) = sequence.generate {
+                                                if !g {
+                                                    generate = false;
+                                                }
                                             }
-                                            let tile = tiles.get(ix.unwrap()).unwrap();
-                                            let nb = match tile.mode {
-                                                "160A" | "320A" | "320D" => 1,
-                                                _ => 2,
-                                            };
-                                            for i in 0..nb {
-                                                tnx.push(tile.index + (i * bytes_per_tile) as u32);
-                                            }
-                                            seq.push(tile);
-                                        }
-                                        let mut generate = true;
-                                        if let Some(g) = sequence.generate {
-                                            if !g {
-                                                generate = false;
-                                            }
-                                        }
-                                        if generate {
-                                            let mut s = String::new();
+                                            if generate {
+                                                let mut s = String::new();
 
-                                            let l = tnx.len() * bytes_per_tile;
-                                            if let Some(b) = sequence.bank {
-                                                s.push_str(&format!("bank{b} "));
-                                            } else if let Some(b) = tiles_sheet.bank {
-                                                s.push_str(&format!("bank{b} "));
-                                            }
-                                            if let Some(h) = sequence.holeydma {
-                                                if h {
-                                                    s.push_str("holeydma ");
+                                                let l = tnx.len() * bytes_per_tile;
+                                                if let Some(b) = sequence.bank {
+                                                    s.push_str(&format!("bank{b} "));
+                                                } else if let Some(b) = tiles_sheet.bank {
+                                                    s.push_str(&format!("bank{b} "));
                                                 }
-                                            }
-                                            s.push_str(&format!(
+                                                if let Some(h) = sequence.holeydma {
+                                                    if h {
+                                                        s.push_str("holeydma ");
+                                                    }
+                                                }
+                                                s.push_str(&format!(
                                                 "reversed scattered({},{}) char {}[{}] = {{\n\t",
                                                 tileheight,
                                                 l,
                                                 &name,
                                                 l * tileheight as usize
                                             ));
-                                            let mut i = 0;
-                                            for y in 0..tileheight as usize {
-                                                for t in &seq {
-                                                    let nb = match t.mode {
-                                                        "160A" | "320A" | "320D" => 1,
-                                                        _ => 2,
-                                                    };
-                                                    for b in 0..(nb * bytes_per_tile) {
-                                                        s.push_str(&format!(
-                                                            "0x{:02x}",
-                                                            t.gfx[y * (nb * bytes_per_tile) + b]
-                                                        ));
-                                                        if i != l * tileheight as usize - 1 {
-                                                            if (i + 1) % 16 != 0 {
-                                                                s.push_str(", ");
-                                                            } else {
-                                                                s.push_str(",\n\t");
+                                                let mut i = 0;
+                                                for y in 0..tileheight as usize {
+                                                    for t in &seq {
+                                                        let nb = match t.mode {
+                                                            "160A" | "320A" | "320D" => 1,
+                                                            _ => 2,
+                                                        };
+                                                        for b in 0..(nb * bytes_per_tile) {
+                                                            s.push_str(&format!(
+                                                                "0x{:02x}",
+                                                                t.gfx
+                                                                    [y * (nb * bytes_per_tile) + b]
+                                                            ));
+                                                            if i != l * tileheight as usize - 1 {
+                                                                if (i + 1) % 16 != 0 {
+                                                                    s.push_str(", ");
+                                                                } else {
+                                                                    s.push_str(",\n\t");
+                                                                }
                                                             }
+                                                            i += 1;
                                                         }
-                                                        i += 1;
                                                     }
                                                 }
+                                                s.push_str("};\n");
+                                                sequences_code.insert(name.clone(), s);
                                             }
-                                            s.push_str("};\n");
-                                            sequences_code.insert(name.clone(), s);
+                                            tiles_store.push((name, tnx, true));
                                         }
-                                        tiles_store.push((name, tnx, true));
                                     }
                                 }
 
@@ -1050,11 +1065,11 @@ fn main() -> Result<()> {
                                         if s.1.len() >= 5 {
                                             // The tilesets must be at least 5 tiles long
                                             let mut tn = Vec::new(); // The vector of tile numbers (in Atari 7800 format)
+                                            let nb = match s.1[0].mode {
+                                                "160A" | "320A" | "320D" => 1,
+                                                _ => 2,
+                                            };
                                             for t in &s.1 {
-                                                let nb = match t.mode {
-                                                    "160A" | "320A" | "320D" => 1,
-                                                    _ => 2,
-                                                };
                                                 for i in 0..nb {
                                                     tn.push(t.index + (i * bytes_per_tile) as u32);
                                                 }
@@ -1063,13 +1078,10 @@ fn main() -> Result<()> {
                                             let mut found = false;
                                             for c in &tiles_store {
                                                 if c.2 {
+                                                    //println!("Compare {:?} with {}", tn, c.0);
                                                     // Look only at immediate sequences
                                                     // Look for tn in c.1
-                                                    if c.1
-                                                        .windows(tn.len())
-                                                        .position(|w| tn == w)
-                                                        .is_none()
-                                                    {
+                                                    if c.1.windows(tn.len()).any(|w| tn == w) {
                                                         found = true;
                                                         break;
                                                     }
@@ -1079,10 +1091,67 @@ fn main() -> Result<()> {
                                                 // Keep it. It's a part of sequence
                                                 tilesets_ex.push(s);
                                             } else {
-                                                // TODO: OK. This is not a sequence. Let's try to cut it.
+                                                // OK. This is not a sequence. Let's try to cut it.
                                                 // Let's look at the sequence but the first tile
                                                 // And then at the sequence but the last tile
-                                                tilesets_ex.push(s);
+                                                let mut tnx = VecDeque::from(tn.clone());
+                                                for _ in 0..nb {
+                                                    tnx.pop_front();
+                                                }
+                                                for c in &tiles_store {
+                                                    if c.2 {
+                                                        //println!("Compare {:?} with {}", tnx, c.0);
+                                                        // Look only at immediate sequences
+                                                        // Look for tnx in c.1
+                                                        if c.1.windows(tnx.len()).any(|w| tnx == w)
+                                                        {
+                                                            found = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                                if found {
+                                                    //println!("I was here");
+                                                    // Let's split it into two tilesets
+                                                    let tileset1 = vec![s.1[0].clone()];
+                                                    tilesets_ex.push((s.0, tileset1));
+                                                    let mut tileset2 = s.1.clone();
+                                                    tileset2.remove(0);
+                                                    tilesets_ex.push((s.0 + 1, tileset2));
+                                                } else {
+                                                    let mut tnx = tn.clone();
+                                                    for _ in 0..nb {
+                                                        tnx.pop();
+                                                    }
+                                                    for c in &tiles_store {
+                                                        if c.2 {
+                                                            //println!("Compare {:?} with {}", tnx, c.0);
+                                                            // Look only at immediate sequences
+                                                            // Look for tnx in c.1
+                                                            if c.1
+                                                                .windows(tnx.len())
+                                                                .any(|w| tnx == w)
+                                                            {
+                                                                found = true;
+                                                                break;
+                                                            }
+                                                        }
+                                                    }
+                                                    if found {
+                                                        //println!("I was here");
+                                                        // Let's split it into two tilesets
+                                                        let mut tileset2 = s.1.clone();
+                                                        let tileset1 =
+                                                            vec![tileset2.pop().unwrap()];
+                                                        tilesets_ex.push((
+                                                            s.0 + tileset2.len() as u32,
+                                                            tileset1,
+                                                        ));
+                                                        tilesets_ex.push((s.0, tileset2));
+                                                    } else {
+                                                        tilesets_ex.push(s);
+                                                    }
+                                                }
                                             }
                                         } else {
                                             tilesets_ex.push(s);
