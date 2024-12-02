@@ -835,9 +835,34 @@ fn main() -> Result<()> {
                                                             background_startx = x as u32;
                                                         }
                                                     } else {
+                                                        // Let's look at the current foreground
+                                                        // tileset to see if it would fit as a
+                                                        // background tileset
+                                                        if let Some(tx) = foreground_tileset.last()
+                                                        {
+                                                            // Is the cell compatible with the foreground tileset in construction ?
+                                                            if bt.mode == tx.mode
+                                                                && bt.palette_number
+                                                                    == tx.palette_number
+                                                                && bt.fake == tx.fake
+                                                            {
+                                                                // Yes, it's compatible. Let's
+                                                                // convert this foreground tileset
+                                                                // into a background tileset
+                                                                background_tileset =
+                                                                    foreground_tileset.clone();
+                                                                background_startx =
+                                                                    foreground_startx;
+                                                                foreground_tileset =
+                                                                    Vec::<Tile>::new();
+                                                            } else {
+                                                                background_startx = x as u32;
+                                                            }
+                                                        } else {
+                                                            background_startx = x as u32;
+                                                        }
                                                         // No, so start a new background tileset
                                                         background_tileset.push(bt.clone());
-                                                        background_startx = x as u32;
                                                         // And send the current foreground
                                                         if !foreground_tileset.is_empty() {
                                                             tilesets.push_back((
@@ -1010,8 +1035,8 @@ fn main() -> Result<()> {
                                                         }
                                                     } else {
                                                         // No there is nothing. So let's start a background tileset
-                                                        background_tileset.push(t.clone());
-                                                        background_startx = x as u32;
+                                                        foreground_tileset.push(t.clone());
+                                                        foreground_startx = x as u32;
                                                     }
                                                 }
                                             }
