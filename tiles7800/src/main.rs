@@ -1029,12 +1029,12 @@ fn main() -> Result<()> {
                                                                 foreground_tileset,
                                                             ));
                                                             foreground_tileset = Vec::<Tile>::new();
-                                                            // And let's start a background tileset
-                                                            background_tileset.push(t.clone());
-                                                            background_startx = x as u32;
+                                                            // And let's start a foreground tileset
+                                                            foreground_tileset.push(t.clone());
+                                                            foreground_startx = x as u32;
                                                         }
                                                     } else {
-                                                        // No there is nothing. So let's start a background tileset
+                                                        // No there is nothing. So let's start a foreground tileset
                                                         foreground_tileset.push(t.clone());
                                                         foreground_startx = x as u32;
                                                     }
