@@ -1369,7 +1369,7 @@ fn main() -> Result<()> {
                                         } else {
                                             let tilemap_name = format!("{}_{}_data", varname, y);
                                             if let Some(b) = tiles_sheet.bank {
-                                                print!("bank{b} ");
+                                                output.push_str(&format!("bank{} ", b));
                                             }
                                             output.push_str(&format!(
                                                 "const char {}[] = {{{}96, 0xff}};\n",
