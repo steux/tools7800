@@ -33,6 +33,12 @@ struct Args {
     /// Generate immediate mode sparse tiling
     #[arg(short, long, default_value = "false")]
     immediate: bool,
+    /// Force left to right tileset order generation (for horizontal scrolling games)
+    #[arg(short = 'o', long, default_value = "false")]
+    force_left_to_right_order: bool,
+    /// Forbid immediate mode usage when generating tilesets
+    #[arg(short = 'f', long, default_value = "false")]
+    forbid_immediate: bool,
 }
 
 #[derive(Deserialize)]
@@ -428,6 +434,9 @@ fn main() -> Result<()> {
                                     eprintln!("Only the first sprite sheet (tiles) will be used");
                                 }
                                 let tiles_sheet = &t.sprite_sheets[0];
+                                let forbid_immediate =
+                                    args.forbid_immediate || tiles_sheet.mirror.is_some(); // Forbid imediate mode if there is any mirroring implied
+
                                 let img = image::open(&tiles_sheet.image)
                                     .expect(&format!("Can't open image {}", tiles_sheet.image));
                                 let image_width = if let Some(iw) = imagewidth {
@@ -475,12 +484,8 @@ fn main() -> Result<()> {
                                                                         // generated atari 7800 tiles (in the order of yaml file), ix is the tile number in tiled
                                     let nbtilesx = tile.width / tilewidth;
                                     let nbtilesy = tile.height / tileheight;
-                                    let palette_number = if let Some(p) = tile.palette_number {
-                                        p
-                                    } else {
-                                        0
-                                    };
-                                    let mut background = if let Some(b) = &tile.background {
+                                    let palette_number = tile.palette_number.unwrap_or_default();
+                                    let background = if let Some(b) = &tile.background {
                                         refs.get(b).copied()
                                     } else {
                                         None
@@ -488,10 +493,6 @@ fn main() -> Result<()> {
                                     let mut idx = if let Some(alias) = &tile.alias {
                                         if let Some(i) = aliases.get(alias.as_str()) {
                                             if let Some(Mirror::Vertical) = tile.mirror {
-                                                if let Some(b) = background {
-                                                    // Background is also reversed
-                                                    background = Some(b + 1);
-                                                }
                                                 *i + 1 // Add 1 for vertical mirroring
                                             } else {
                                                 *i
@@ -551,7 +552,19 @@ fn main() -> Result<()> {
                                                 );
                                             }
                                             if let Some(Mirror::Vertical) = tiles_sheet.mirror {
-                                                let bg = background.map(|b| b + 1);
+                                                let bg = if let Some(b) = background {
+                                                    let yy = (b - 1) / (image_width / tilewidth);
+                                                    let xx =
+                                                        (b - 1) - yy * (image_width / tilewidth);
+                                                    Some(
+                                                        1 + xx
+                                                            + (img.height() / tileheight - 1 - yy)
+                                                                * image_width
+                                                                / tilewidth,
+                                                    )
+                                                } else {
+                                                    None
+                                                };
                                                 tiles.insert(
                                                     ixx + i - j * image_width / tilewidth,
                                                     Tile {
@@ -777,10 +790,17 @@ fn main() -> Result<()> {
                                         if cell == 0 {
                                             // Empty cell
                                             if !background_tileset.is_empty() {
-                                                tilesets.push_front((
-                                                    background_startx,
-                                                    background_tileset,
-                                                ));
+                                                if args.force_left_to_right_order {
+                                                    tilesets.push_back((
+                                                        background_startx,
+                                                        background_tileset,
+                                                    ));
+                                                } else {
+                                                    tilesets.push_front((
+                                                        background_startx,
+                                                        background_tileset,
+                                                    ));
+                                                }
                                                 background_tileset = Vec::<Tile>::new();
                                             }
                                             if !foreground_tileset.is_empty() {
@@ -814,10 +834,17 @@ fn main() -> Result<()> {
                                                             if background_tileset.len()
                                                                 >= tileset_maxsize
                                                             {
-                                                                tilesets.push_front((
-                                                                    background_startx,
-                                                                    background_tileset,
-                                                                ));
+                                                                if args.force_left_to_right_order {
+                                                                    tilesets.push_back((
+                                                                        background_startx,
+                                                                        background_tileset,
+                                                                    ));
+                                                                } else {
+                                                                    tilesets.push_front((
+                                                                        background_startx,
+                                                                        background_tileset,
+                                                                    ));
+                                                                }
                                                                 background_tileset =
                                                                     Vec::<Tile>::new();
                                                                 background_startx = x as u32;
@@ -825,13 +852,19 @@ fn main() -> Result<()> {
                                                             background_tileset.push(bt.clone());
                                                         } else {
                                                             // No. Let's write this background tileset
-                                                            tilesets.push_front((
-                                                                background_startx,
-                                                                background_tileset,
-                                                            ));
-                                                            background_tileset = Vec::<Tile>::new();
+                                                            if args.force_left_to_right_order {
+                                                                tilesets.push_back((
+                                                                    background_startx,
+                                                                    background_tileset,
+                                                                ));
+                                                            } else {
+                                                                tilesets.push_front((
+                                                                    background_startx,
+                                                                    background_tileset,
+                                                                ));
+                                                            }
                                                             // And let's start a new background tileset
-                                                            background_tileset.push(bt.clone());
+                                                            background_tileset = vec![bt.clone()];
                                                             background_startx = x as u32;
                                                         }
                                                     } else {
@@ -912,10 +945,17 @@ fn main() -> Result<()> {
                                                 } else {
                                                     // Empty cell
                                                     if !background_tileset.is_empty() {
-                                                        tilesets.push_front((
-                                                            background_startx,
-                                                            background_tileset,
-                                                        ));
+                                                        if args.force_left_to_right_order {
+                                                            tilesets.push_back((
+                                                                background_startx,
+                                                                background_tileset,
+                                                            ));
+                                                        } else {
+                                                            tilesets.push_front((
+                                                                background_startx,
+                                                                background_tileset,
+                                                            ));
+                                                        }
                                                         background_tileset = Vec::<Tile>::new();
                                                     }
                                                     if !foreground_tileset.is_empty() {
@@ -938,10 +978,17 @@ fn main() -> Result<()> {
                                                         if background_tileset.len()
                                                             >= tileset_maxsize
                                                         {
-                                                            tilesets.push_front((
-                                                                background_startx,
-                                                                background_tileset,
-                                                            ));
+                                                            if args.force_left_to_right_order {
+                                                                tilesets.push_back((
+                                                                    background_startx,
+                                                                    background_tileset,
+                                                                ));
+                                                            } else {
+                                                                tilesets.push_front((
+                                                                    background_startx,
+                                                                    background_tileset,
+                                                                ));
+                                                            }
                                                             background_tileset = Vec::<Tile>::new();
                                                             background_startx = x as u32;
                                                         }
@@ -957,10 +1004,17 @@ fn main() -> Result<()> {
                                                         }
                                                     } else {
                                                         // No. Let's write this background tileset
-                                                        tilesets.push_front((
-                                                            background_startx,
-                                                            background_tileset,
-                                                        ));
+                                                        if args.force_left_to_right_order {
+                                                            tilesets.push_back((
+                                                                background_startx,
+                                                                background_tileset,
+                                                            ));
+                                                        } else {
+                                                            tilesets.push_front((
+                                                                background_startx,
+                                                                background_tileset,
+                                                            ));
+                                                        }
                                                         background_tileset = Vec::<Tile>::new();
                                                         // Is there a foreground tileset ?
                                                         if let Some(tx) = foreground_tileset.last()
@@ -1041,13 +1095,20 @@ fn main() -> Result<()> {
                                                 }
                                             }
                                         } else {
-                                            //return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Wrong tilesheet. Index unknown")));
+                                            //return Err(anyhow!("Wrong tilesheet. Index unknown"));
                                             // It's not in the tilesheet. Consider it as 0 (empty)
                                             if !background_tileset.is_empty() {
-                                                tilesets.push_front((
-                                                    background_startx,
-                                                    background_tileset,
-                                                ));
+                                                if args.force_left_to_right_order {
+                                                    tilesets.push_back((
+                                                        background_startx,
+                                                        background_tileset,
+                                                    ));
+                                                } else {
+                                                    tilesets.push_front((
+                                                        background_startx,
+                                                        background_tileset,
+                                                    ));
+                                                }
                                                 //    .push((background_startx, background_tileset));
                                                 background_tileset = Vec::<Tile>::new();
                                             }
@@ -1070,8 +1131,15 @@ fn main() -> Result<()> {
                                     }
                                     // Write the last tilesets
                                     if !background_tileset.is_empty() {
-                                        tilesets
-                                            .push_front((background_startx, background_tileset));
+                                        if args.force_left_to_right_order {
+                                            tilesets
+                                                .push_back((background_startx, background_tileset));
+                                        } else {
+                                            tilesets.push_front((
+                                                background_startx,
+                                                background_tileset,
+                                            ));
+                                        }
                                     }
                                     if !foreground_tileset.is_empty() {
                                         tilesets.push_back((foreground_startx, foreground_tileset));
@@ -1222,7 +1290,7 @@ fn main() -> Result<()> {
                                                                                 // of immediate tile data, since it's fake
                                                 }
                                             }
-                                            if continuous_tileset {
+                                            if continuous_tileset && !forbid_immediate {
                                                 w.push(tn.len() * bytes_per_tile);
                                                 imm.push(true);
                                                 tile_names.push(
