@@ -1290,7 +1290,10 @@ fn main() -> Result<()> {
                                                                                 // of immediate tile data, since it's fake
                                                 }
                                             }
-                                            if continuous_tileset && !forbid_immediate {
+                                            if continuous_tileset
+                                                && !forbid_immediate
+                                                && !args.immediate
+                                            {
                                                 w.push(tn.len() * bytes_per_tile);
                                                 imm.push(true);
                                                 tile_names.push(
@@ -1386,7 +1389,7 @@ fn main() -> Result<()> {
                                                                 }
                                                             }
                                                         }
-                                                        output.push_str("}};\n");
+                                                        output.push_str("};\n");
                                                     } else {
                                                         output.push_str(&format!(
                                                             "const char {}[{}] = {{",
@@ -1402,7 +1405,7 @@ fn main() -> Result<()> {
                                                             tn[tn.len() - 1]
                                                         ));
                                                     }
-                                                    tiles_store.push((name.clone(), tn, false));
+                                                    tiles_store.push((name.clone(), tn, immediate));
                                                     tile_names.push(name);
                                                 }
                                             }
