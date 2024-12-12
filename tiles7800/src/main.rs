@@ -424,7 +424,12 @@ fn main() -> Result<()> {
                         if array.len() == width * height {
                             if let Some(yaml_file) = args.yaml {
                                 let tileset_maxsize =
-                                    args.maxsize.unwrap_or(if tilewidth == 8 { 31 } else { 15 });
+                                    args.maxsize
+                                        .unwrap_or(if tilewidth == 8 && !args.immediate {
+                                            31
+                                        } else {
+                                            15
+                                        });
                                 let contents = fs::read_to_string(yaml_file)
                                     .expect("Unable to read input file");
                                 let t: AllSprites = serde_yaml::from_str(&contents)?;
