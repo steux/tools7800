@@ -12,7 +12,7 @@ struct RmtVectors {
 
 #[derive(BinRead, Debug)]
 struct RmtHeader {
-    _magic: [u8; 4], // RMT4
+    _magic: [u8; 4], // RMT4 or RMT8
     track_len: u8,
     song_speed: u8,
     player_freq: u8,
@@ -42,13 +42,13 @@ fn main() -> std::io::Result<()> {
 
     // Load the RMT4 header
     let mut found = None;
-    let magic = &vec!['R' as u8, 'M' as u8, 'T' as u8, '4' as u8];
-    for (i, w) in buffer.windows(4).enumerate() {
+    let magic = &vec!['R' as u8, 'M' as u8, 'T' as u8];
+    for (i, w) in buffer.windows(3).enumerate() {
         if w == magic {
             found = Some(i);
         }
     }
-    let rmtstart = found.expect("Missing RMT4 header");
+    let rmtstart = found.expect("Missing RMT header");
     let mut cursor = std::io::Cursor::new(buffer);
     cursor.set_position(rmtstart as u64);
     let header: RmtHeader = cursor.read_le().unwrap();
@@ -69,7 +69,7 @@ fn main() -> std::io::Result<()> {
 
     let song = args.song_name.unwrap_or("RMTSTART".into());
     print!(
-        "const char {song}[] = {{'R', 'M', 'T', '4', 
+        "const char {song}[] = {{'{}', '{}', '{}', '{}', 
     {},  // Tracklen
     {}, // Song speed
     {}, // Player freq
@@ -78,6 +78,10 @@ fn main() -> std::io::Result<()> {
     {song} + 0x{:04x}, {song} + 0x{:04x} >> 8, // Pointer to track pointers, lo 
     {song} + 0x{:04x}, {song} + 0x{:04x} >> 8, // Pointer to track pointers, hi
     {song} + 0x{:04x}, {song} + 0x{:04x} >> 8, // Pointer to song",
+        header._magic[0] as char,
+        header._magic[1] as char,
+        header._magic[2] as char,
+        header._magic[3] as char,
         header.track_len,
         header.song_speed,
         header.player_freq,
