@@ -39,6 +39,15 @@ struct Args {
     /// Forbid immediate mode usage when generating tilesets
     #[arg(short = 'f', long, default_value = "false")]
     forbid_immediate: bool,
+    /// Generate direct tilesets (4 or 5 bytes direct use instead of 7 bytes) 
+    #[arg(short = 'd', long, default_value = "false")]
+    direct: bool,
+    /// Generate 4 bytes headers in direct mode 
+    #[arg(short = '4', long, default_value = "true")]
+    four_bytes: bool,
+    /// Adds an offset to directly generated tilesets 
+    #[arg(short = 'o', long, default_value = "0")]
+    offset: u8,
 }
 
 #[derive(Deserialize)]
@@ -1430,8 +1439,18 @@ fn main() -> Result<()> {
                                                 (10 + 3 + 9 * w[c]) / 2
                                             };
                                             let tn = &tile_names[c];
-                                            tilemap_str.push_str(&format!("{}, {}, {}, 0x{:02x}, {} >> 8, ({} << 5) | ((-{}) & 0x1f), {dma}, ", 
-                                                s.0 + s.1.len() as u32 - 1, s.0, tn, write_mode, tn, ttype.palette_number, w[c]));
+                                            if args.direct {
+                                                if imm[c] && args.four_bytes && c != 0 {
+                                                    tilemap_str.push_str(&format!("{}, ({} << 5) | ((-{}) & 0x1f), {} >> 8, {}, ", 
+                                                        tn, ttype.palette_number, w[c], tn, s.0 * 8 + args.offset as u32));
+                                                } else {
+                                                    tilemap_str.push_str(&format!("{}, 0x{:02x}, {} >> 8, ({} << 5) | ((-{}) & 0x1f), {}, ", 
+                                                        tn, write_mode, tn, ttype.palette_number, w[c], s.0 * 8 + args.offset as u32));
+                                                }
+                                            } else {
+                                                tilemap_str.push_str(&format!("{}, {}, {}, 0x{:02x}, {} >> 8, ({} << 5) | ((-{}) & 0x1f), {dma}, ", 
+                                                    s.0 + s.1.len() as u32 - 1, s.0, tn, write_mode, tn, ttype.palette_number, w[c]));
+                                            }
                                             c += 1;
                                         }
                                         let mut found = None;
@@ -1447,10 +1466,17 @@ fn main() -> Result<()> {
                                             if let Some(b) = tiles_sheet.bank {
                                                 output.push_str(&format!("bank{} ", b));
                                             }
-                                            output.push_str(&format!(
-                                                "const char {}[] = {{{}96, 0xff}};\n",
-                                                &tilemap_name, tilemap_str
-                                            ));
+                                            if args.direct {
+                                                output.push_str(&format!(
+                                                    "const char {}[] = {{{}0, 0}};\n",
+                                                    &tilemap_name, tilemap_str
+                                                ));
+                                            } else {
+                                                output.push_str(&format!(
+                                                    "const char {}[] = {{{}96, 0xff}};\n",
+                                                    &tilemap_name, tilemap_str
+                                                ));
+                                            }
                                             tilesmap_store
                                                 .push((tilemap_name.clone(), tilemap_str.clone()));
                                             tilesmap.push(tilemap_name);
