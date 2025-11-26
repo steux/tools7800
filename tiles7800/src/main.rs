@@ -604,6 +604,7 @@ fn main() -> Result<()> {
                                 // Generate the C code for the the sparse tiles
                                 // to be used with multisprite.h or sparse_tiling.h header
                                 let mut tiles_store = Vec::<(String, Vec<u32>, bool)>::new();
+                                let mut tiles_store_sequences = Vec::<(String, Vec<u32>, bool)>::new();
                                 let mut sequences_code = HashMap::<String, String>::new();
                                 let mut sequences_used = HashSet::<String>::new();
 
@@ -780,7 +781,7 @@ fn main() -> Result<()> {
                                                 s.push_str("};\n");
                                                 sequences_code.insert(name.clone(), s);
                                             }
-                                            tiles_store.push((name, tnx, true));
+                                            tiles_store_sequences.push((name, tnx, true));
                                         }
                                     }
                                 }
@@ -1325,7 +1326,7 @@ fn main() -> Result<()> {
                                             } else {
                                                 // 1st optimization : look in the tiles_store if it's already there
                                                 let mut found = None;
-                                                for c in &tiles_store {
+                                                for c in &tiles_store_sequences {
                                                     // Look for tn in c.1
                                                     if let Some(p) =
                                                         c.1.windows(tn.len()).position(|w| tn == w)
@@ -1347,13 +1348,32 @@ fn main() -> Result<()> {
                                                             ))
                                                         };
                                                         break;
-                                                    } /*
-                                                      if c.1.starts_with(&tn) {
-                                                          found = Some(c.0.clone());
-                                                          immediate = c.2;
-                                                          break;
-                                                      }
-                                                      */
+                                                    }
+                                                }
+                                                if found.is_none() {
+                                                    for c in &tiles_store {
+                                                        // Look for tn in c.1
+                                                        if let Some(p) =
+                                                        c.1.windows(tn.len()).position(|w| tn == w)
+                                                        {
+                                                            immediate = c.2;
+                                                            found = if p == 0 {
+                                                                Some(c.0.clone())
+                                                            } else {
+                                                                    let offset = if immediate {
+                                                                        p * bytes_per_tile
+                                                                    } else {
+                                                                        p
+                                                                    };
+                                                                    Some(format!(
+                                                                        "{} + {}",
+                                                                        c.0.clone(),
+                                                                        offset
+                                                                    ))
+                                                                };
+                                                            break;
+                                                        }
+                                                    }
                                                 }
 
                                                 // l is the number of bytes in the current tileset
