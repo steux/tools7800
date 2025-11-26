@@ -788,6 +788,7 @@ fn main() -> Result<()> {
                                 let mut tilesmap_store = Vec::<(String, String)>::new();
                                 let mut tilesmap = Vec::<String>::new();
                                 let mut output = String::new();
+                                let mut tilesets_set = Vec::<Vec::<(u32, Vec<Tile>)>>::new();
 
                                 for y in 0..height {
                                     // For each line, find the tilesets
@@ -1264,7 +1265,12 @@ fn main() -> Result<()> {
                                             tilesets_ex.push(s);
                                         }
                                     }
-
+                                    // OK. Now we have the tilesets_ex vector of (pos, tiles)
+                                    tilesets_set.push(tilesets_ex);
+                                }
+                                
+                                let mut y = 0;
+                                for tilesets_ex in tilesets_set {
                                     // Write this line of data
                                     {
                                         let mut c = 0;
@@ -1482,6 +1488,7 @@ fn main() -> Result<()> {
                                             tilesmap.push(tilemap_name);
                                         }
                                     }
+                                    y += 1;
                                 }
 
                                 // Output sequences
