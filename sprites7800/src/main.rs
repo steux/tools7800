@@ -370,9 +370,6 @@ fn main() -> Result<()> {
                     } else {
                         None
                     };
-                    if let Some(b) = bank {
-                        print!("bank{} ", b);
-                    }
                     let default_height = if let Some(h) = sprite_sheet.holeydma {
                         h
                     } else if let Some(h) = sprite_sheet.default_height {
@@ -384,6 +381,9 @@ fn main() -> Result<()> {
                     };
                     if sprite.holeydma && (default_height == 8 || default_height == 16) {
                         print!("holeydma ");
+                    }
+                    if let Some(b) = bank {
+                        print!("bank{} ", b);
                     }
                     if default_height == 16 && sprite.height < 16 {
                         // This is a special case: small sprite for 16 holey DMA (a bullet for instance)
@@ -406,6 +406,81 @@ fn main() -> Result<()> {
                         for _ in bytes.len()
                             ..bytes.len() / sprite.height as usize * default_height as usize - 1
                         {
+                            print!("0x00");
+                            if c % 16 != 0 {
+                                print!(", ");
+                            } else {
+                                print!(",\n\t");
+                            }
+                            c += 1;
+                        }
+                        println!("0x00\n}};");
+                    } else if default_height == 16 && sprite.height == 24 {
+                        // This is a special case: 24 pixels high sprite 
+                        let l = bytes.len() * 16 / 24 as usize;
+                        print!(
+                            "reversed scattered(16,{}) char {}[{}] = {{\n\t",
+                            l / 16,
+                            sprite.name,
+                            l 
+                        );
+                        let mut c = 1;
+                        for i in 0..l - 1 {
+                            print!("0x{:02x}", bytes[i]);
+                            if c % 16 != 0 {
+                                print!(", ");
+                            } else {
+                                print!(",\n\t");
+                            }
+                            c += 1;
+                        }
+                        println!("0x{:02x}\n}};", bytes[l - 1]);
+                        if sprite.holeydma {
+                            print!("holeydma ");
+                        }
+                        if let Some(b) = bank {
+                            print!("bank{} ", b);
+                        }
+                        print!(
+                            "reversed scattered(16,{}) char {}_1[{}] = {{\n\t",
+                            l / 16,
+                            sprite.name,
+                            l 
+                        );
+                        let mut c = 1;
+                        for i in 0..l - 1 {
+                            print!("0x{:02x}", bytes[l / 2 + i]);
+                            if c % 16 != 0 {
+                                print!(", ");
+                            } else {
+                                print!(",\n\t");
+                            }
+                            c += 1;
+                        }
+                        println!("0x{:02x}\n}};", bytes[l / 2 + l - 1]);
+                        if sprite.holeydma {
+                            print!("holeydma ");
+                        }
+                        if let Some(b) = bank {
+                            print!("bank{} ", b);
+                        }
+                        print!(
+                            "reversed scattered(16,{}) char {}_2[{}] = {{\n\t",
+                            l / 16,
+                            sprite.name,
+                            l 
+                        );
+                        let mut c = 1;
+                        for i in 0..l / 2 {
+                            print!("0x{:02x}", bytes[l + i]);
+                            if c % 16 != 0 {
+                                print!(", ");
+                            } else {
+                                print!(",\n\t");
+                            }
+                            c += 1;
+                        }
+                        for _ in 0..l / 2 - 1 {
                             print!("0x00");
                             if c % 16 != 0 {
                                 print!(", ");
