@@ -57,6 +57,7 @@ struct Sprite {
     background: Option<String>,
     bank: Option<u8>,
     fake: Option<bool>,
+    overlay: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -231,17 +232,21 @@ fn main() -> Result<()> {
                                         // If a background is specified
                                         cx = Some(0); // This unknown color is affected to background
                                     } else {
-                                        println!(
-                                            "Unexpected color {:?} found at {},{}",
-                                            color,
-                                            sprite.left + x * pixel_width,
-                                            sprite.top + y
-                                        );
-                                        return Err(anyhow!(
-                                            "Sprite {} has more than {} colors",
-                                            sprite.name,
-                                            maxcolors
-                                        ));
+                                        if let Some(true) = sprite.overlay {
+                                            cx = Some(0);
+                                        } else {
+                                            println!(
+                                                "Unexpected color {:?} found at {},{}",
+                                                color,
+                                                sprite.left + x * pixel_width,
+                                                sprite.top + y
+                                            );
+                                            return Err(anyhow!(
+                                                    "Sprite {} has more than {} colors",
+                                                    sprite.name,
+                                                    maxcolors
+                                            ));
+                                        }
                                     }
                                 }
                             }
