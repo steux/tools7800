@@ -362,8 +362,10 @@ fn main() -> Result<()> {
                                 if c != 0 {
                                     current_byte |= 1 << (7 - current_bits);
                                     if current_bits < 2 {
+                                        current_byte &= 0xf3;
                                         current_byte |= (c - 1) << 2;
                                     } else {
+                                        current_byte &= 0xfc;
                                         current_byte |= c - 1;
                                     }
                                 }
