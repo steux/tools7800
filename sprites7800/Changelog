@@ -1,5 +1,6 @@
 v0.4.5 (01/08/2026):
-   - Added overlay option to make sprites with several layers 
+   - Added overlay option to make sprites with several layers
+   - Corrected a bug with 320A 1-color palettes not working
 
 v0.4.4 (11/28/2025):
    - Added special 24 lines sprite generation
