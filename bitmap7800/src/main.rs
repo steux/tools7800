@@ -42,6 +42,7 @@ struct Bitmap {
     width: u32,
     height: u32,
     xoffset: Option<u32>,
+    palette_offset: Option<u8>
 }
 
 // Color tables:
@@ -362,8 +363,10 @@ fn main() -> Result<()> {
                                 if c != 0 {
                                     current_byte |= 1 << (7 - current_bits);
                                     if current_bits < 2 {
+                                        current_byte &= 0xf3;
                                         current_byte |= (c - 1) << 2;
                                     } else {
+                                        current_byte &= 0xfc;
                                         current_byte |= c - 1;
                                     }
                                 }
@@ -537,7 +540,7 @@ fn main() -> Result<()> {
                                     mode_byte,
                                     name,
                                     last - first,
-                                    palette,
+                                    palette + bitmap.palette_offset.unwrap_or(0),
                                     x
                                 )
                                 .as_str(),
@@ -549,7 +552,7 @@ fn main() -> Result<()> {
                                     "{} & 0xff, (-{} & 0x1f) | ({} << 5), {} >> 8, {}, ",
                                     name,
                                     last - first,
-                                    palette,
+                                    palette + bitmap.palette_offset.unwrap_or(0),
                                     name,
                                     x
                                 )
@@ -607,11 +610,11 @@ fn main() -> Result<()> {
                 let index_in_palette;
                 match bitmap_sheet.mode.as_str() {
                     "320A" | "320C" => {
-                        palette = i;
+                        palette = i + (bitmap.palette_offset.unwrap_or(0) as usize);
                         index_in_palette = 2;
                     }
                     "160B" => {
-                        palette = i / 3;
+                        palette = i / 3 + (bitmap.palette_offset.unwrap_or(0) as usize);
                         index_in_palette = 1 + i % 3;
                     }
                     _ => unimplemented!(),
