@@ -129,7 +129,7 @@ fn main() -> Result<()> {
                 };
 
                 let mut colors = [(0u8, 0u8, 0u8); 12];
-                if maxcolors != 1 {
+                /*if maxcolors != 1*/ {
                     if let Some(palettes) = &all_sprites.palettes {
                         if let Some(pname) = &sprite.palette {
                             let px = palettes.into_iter().find(|x| &x.name == pname);
@@ -154,6 +154,7 @@ fn main() -> Result<()> {
                         let xp = sprite.left + x * pixel_width;
                         let yp = sprite.top + y;
                         let color = img.get_pixel(xp, yp);
+                        //println!("{x},{y},{:?}", color);
                         let mut cx: Option<u8> = None;
                         // In case of defined palette, priority is to find the color in the palette, so that black is not considered as a background color
                         if (color[3] != 0 && sprite.palette.is_some())
@@ -168,6 +169,7 @@ fn main() -> Result<()> {
                                 {
                                     // Ok. this is a pixel of color c
                                     cx = Some((c + 1) as u8);
+                                    //println!("Pixel of color {:?}, {:?}", cx, colors[c]);
                                     // 320C mode contraint check
                                     if mode == "320C" {
                                         // Check next pixel, should be background or same color
